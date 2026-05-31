@@ -79,12 +79,12 @@ function parseEquipmentRows(rows) {
     name:     String(r[2] || ''),
     qty:      Number(r[3]) || 0,
     status:   String(r[4] || '정상'),
-    youtube:  String(r[5] || ''),
-    muscles:  String(r[6] || ''),
-    level:    String(r[7] || ''),
-    method:   String(r[8] || ''),
-    caution:  String(r[9] || ''),
-    imageUrl: String(r[10] || ''),
+    muscles:  String(r[8] || ''),
+    level:    String(r[9] || ''),
+    method:   String(r[10] || ''),
+    caution:  String(r[11] || ''),
+    youtube:  String(r[12] || ''),
+    imageUrl: String(r[13] || ''),
   }));
 }
 
@@ -165,8 +165,10 @@ function renderCards() {
       <div class="equip-card" onclick="openEquipModal('${escHtml(e.id)}')">
         <div class="equip-card-top" style="background:${meta.bg};">
           ${e.imageUrl
-            ? `<img src="${escHtml(e.imageUrl)}" alt="${escHtml(e.name)}"
-                    style="width:100%; height:100%; object-fit:cover;" loading="lazy">`
+            ? `<img src="${escHtml(toDriveImgUrl(e.imageUrl))}" alt="${escHtml(e.name)}"
+                    style="width:100%; height:100%; object-fit:cover;" loading="lazy"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+               <i class="fa-solid ${meta.icon}" style="color:${meta.color}; opacity:0.7; display:none;"></i>`
             : `<i class="fa-solid ${meta.icon}" style="color:${meta.color}; opacity:0.7;"></i>`}
           <span class="badge" style="position:absolute; top:8px; right:8px; background:${meta.bg}; color:${meta.color}; border:1px solid ${meta.color}30; font-size:0.68rem;">
             ${escHtml(e.category)}
@@ -304,6 +306,19 @@ function closeEquipModal() {
 
 function handleModalBackdrop(e) {
   if (e.target === document.getElementById('equipModalBackdrop')) closeEquipModal();
+}
+
+// ── 구글 드라이브 URL → 직접 표시 URL ───────────────────────
+function toDriveImgUrl(url) {
+  if (!url || !url.trim()) return '';
+  // https://drive.google.com/file/d/FILE_ID/view...
+  const m1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (m1) return `https://lh3.googleusercontent.com/d/${m1[1]}`;
+  // https://drive.google.com/open?id=FILE_ID
+  const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (m2) return `https://lh3.googleusercontent.com/d/${m2[1]}`;
+  // 이미 변환된 URL이거나 외부 URL이면 그대로 반환
+  return url;
 }
 
 // ── 유튜브 URL → 임베드 URL ──────────────────────────────────
