@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>아이언핏 GYM - 시스템 관리자</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── 관리자 탭 ── */
+    .admin-tab-bar {
+      display: flex;
+      gap: 0.25rem;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 1.5rem;
+    }
+    .admin-tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.65rem 1.2rem;
+      border: none;
+      background: none;
+      color: var(--color-text-muted);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+    .admin-tab-btn:hover { color: var(--color-primary); }
+    .admin-tab-btn.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+    }
+    .admin-tab-btn .tab-badge {
+      background: var(--color-danger);
+      color: #fff;
+      border-radius: 99px;
+      padding: 1px 6px;
+      font-size: 0.68rem;
+    }
+    .admin-tab-panel { display: none; }
+    .admin-tab-panel.active { display: block; }
+
+    /* ── 섹션 카드 ── */
+    .admin-section {
+      background: var(--bg-card);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .admin-section-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--color-text-primary);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .admin-section-title i { color: var(--color-primary); }
+
+    /* ── 통계 카드 행 ── */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .stat-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    .stat-card .stat-val { font-size: 1.5rem; font-weight: 800; color: var(--color-text-primary); }
+    .stat-card .stat-lbl { font-size: 0.75rem; color: var(--color-text-muted); }
+
+    /* ── 테이블 ── */
+    .admin-table-wrap { overflow-x: auto; }
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+    }
+    .admin-table th {
+      padding: 0.6rem 0.75rem;
+      text-align: left;
+      color: var(--color-text-muted);
+      font-weight: 700;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+    .admin-table td {
+      padding: 0.7rem 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--color-text-primary);
+      vertical-align: middle;
+    }
+    .admin-table tr:last-child td { border-bottom: none; }
+    .admin-table tr:hover td { background: var(--bg-secondary); }
+
+    /* ── 만료 경고 배지 ── */
+    .expiry-warn {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: #FEF3C7;
+      color: #92400E;
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+    .expiry-danger {
+      background: #FEE2E2;
+      color: #991B1B;
+    }
+
+    /* ── 상태 뱃지 ── */
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .status-ok     { background: #ECFDF5; color: #065F46; }
+    .status-warn   { background: #FEF3C7; color: #92400E; }
+    .status-danger { background: #FEE2E2; color: #991B1B; }
+    .status-pause  { background: #F1F5F9; color: #475569; }
+
+    /* ── 폼 그리드 ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.85rem;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 0.3rem; }
+    .form-group label { font-size: 0.78rem; font-weight: 700; color: var(--color-text-muted); }
+    .form-grid .form-group.full { grid-column: 1 / -1; }
+
+    /* ── 기구 필터 ── */
+    .equip-filter-bar {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .filter-chip {
+      padding: 0.35rem 0.85rem;
+      border-radius: 99px;
+      border: 1.5px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--color-text-muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    .filter-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .filter-chip.active {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: #fff;
+    }
+
+    /* ── 트레이너 카드 그리드 ── */
+    .trainer-assign-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .trainer-assign-card {
+      background: var(--bg-secondary);
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      padding: 1rem;
+      text-align: center;
+    }
+    .trainer-assign-card .ta-avatar {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 0.5rem;
+    }
+    .trainer-assign-card .ta-name { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .trainer-assign-card .ta-count { font-size: 0.75rem; color: var(--color-text-muted); }
+    .trainer-assign-card .ta-count span { font-size: 1rem; font-weight: 800; color: var(--color-primary); }
+
+    /* ── 수납 처리 버튼 ── */
+    .btn-pay {
+      padding: 0.3rem 0.75rem;
+      border-radius: 6px;
+      background: var(--color-primary);
+      color: #fff;
+      border: none;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-pay:hover { opacity: 0.85; }
+    .btn-pay:disabled { background: var(--border-color); color: var(--color-text-muted); cursor: default; }
+
+    /* ── 상태 변경 버튼 그룹 ── */
+    .status-btn-group { display: flex; gap: 4px; }
+    .status-btn {
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-color);
+      background: none;
+      font-size: 0.7rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      transition: all 0.15s;
+    }
+    .status-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .status-btn.active-ok     { background: #ECFDF5; color: #065F46; border-color: #6EE7B7; }
+    .status-btn.active-warn   { background: #FEF3C7; color: #92400E; border-color: #FCD34D; }
+    .status-btn.active-danger { background: #FEE2E2; color: #991B1B; border-color: #FCA5A5; }
+
+    /* ── 미수금 하이라이트 행 ── */
+    .admin-table tr.unpaid-row td { background: #1a0f0f; }
+
+    /* ── 매핑 드롭다운 행 ── */
+    .assign-select {
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-color);
+      background: #FFFFFF;
+      color: #1F2937;
+      font-size: 0.8rem;
+      min-width: 110px;
+    }
+
+    @media (max-width: 1024px) {
+      .stat-row { grid-template-columns: repeat(2, 1fr); }
+      .trainer-assign-grid { grid-template-columns: repeat(2, 1fr); }
+      .form-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .stat-row { grid-template-columns: 1fr 1fr; }
+      .trainer-assign-grid { grid-template-columns: repeat(2, 1fr); }
+      .form-grid { grid-template-columns: 1fr; }
+      .admin-tab-btn { padding: 0.5rem 0.75rem; font-size: 0.78rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-container">
+
+  <!-- ── 사이드바 ── -->
+  <aside class="sidebar" id="appSidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <span class="logo-icon"><i class="fa-solid fa-dumbbell"></i></span>
+        <span class="logo-text">IRONFIT <span class="logo-highlight">GYM</span></span>
+      </div>
+    </div>
+    <div class="sidebar-body">
+      <ul class="nav-list">
+        <li class="nav-item"><a href="dashboard.html"><i class="fa-solid fa-chart-line"></i><span>대시보드</span></a></li>
+        <li class="nav-item"><a href="workout.html"><i class="fa-solid fa-calendar-check"></i><span>운동 기록</span></a></li>
+        <li class="nav-item"><a href="body.html"><i class="fa-solid fa-weight-scale"></i><span>신체 변화</span></a></li>
+        <li class="nav-item"><a href="diet.html"><i class="fa-solid fa-utensils"></i><span>식단 기록</span></a></li>
+        <li class="nav-item"><a href="equipment.html"><i class="fa-solid fa-circle-info"></i><span>기구 사용법</span></a></li>
+        <li class="nav-item"><a href="pt.html"><i class="fa-solid fa-handshake"></i><span>PT 신청·일정</span></a></li>
+        <li class="nav-item role-trainer" style="display:none;"><a href="trainer.html" style="border-left:3px solid var(--color-primary);"><i class="fa-solid fa-user-gear"></i><span>트레이너 관리</span></a></li>
+        <li class="nav-item role-admin active" style="display:none;"><a href="admin.html" style="border-left:3px solid var(--color-primary);"><i class="fa-solid fa-screwdriver-wrench"></i><span>시스템 관리자</span></a></li>
+      </ul>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-profile">
+        <div class="user-avatar" id="userAvatar">A</div>
+        <div class="user-info">
+          <div class="user-name" id="profileName">관리자</div>
+          <div class="user-role" id="profileRole">관리자</div>
+        </div>
+        <button class="btn-logout" id="logoutBtn" title="로그아웃">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- ── 메인 콘텐츠 ── -->
+  <div class="main-content">
+    <header class="main-header">
+      <div class="header-title">
+        <i class="fa-solid fa-bars hamburger-btn" id="menuToggle"></i>
+        <span>시스템 관리자</span>
+      </div>
+      <div class="header-actions">
+        <span class="badge badge-danger" id="alertBadge" style="display:none;"></span>
+      </div>
+    </header>
+
+    <main class="page-body">
+
+      <!-- 요약 통계 -->
+      <div class="stat-row" id="adminStatRow"></div>
+
+      <!-- 탭 바 -->
+      <div class="admin-tab-bar">
+        <button class="admin-tab-btn active" onclick="switchTab('members')">
+          <i class="fa-solid fa-users"></i>회원 관리
+          <span class="tab-badge" id="expiryBadge" style="display:none;"></span>
+        </button>
+        <button class="admin-tab-btn" onclick="switchTab('payments')">
+          <i class="fa-solid fa-credit-card"></i>결제 관리
+          <span class="tab-badge" id="unpaidBadge" style="display:none;"></span>
+        </button>
+        <button class="admin-tab-btn" onclick="switchTab('equipment')">
+          <i class="fa-solid fa-dumbbell"></i>기구 관리
+        </button>
+        <button class="admin-tab-btn" onclick="switchTab('trainers')">
+          <i class="fa-solid fa-person-chalkboard"></i>트레이너 매핑
+        </button>
+      </div>
+
+      <!-- 탭 1: 회원 관리 -->
+      <div class="admin-tab-panel active" id="tab-members">
+        <!-- 신규 회원 추가 폼 -->
+        <div class="admin-section">
+          <div class="admin-section-title"><i class="fa-solid fa-user-plus"></i>신규 회원 등록</div>
+          <div class="form-grid" id="addMemberForm">
+            <div class="form-group">
+              <label>이름 *</label>
+              <input type="text" class="form-input" id="newName" placeholder="홍길동">
+            </div>
+            <div class="form-group">
+              <label>성별</label>
+              <select class="form-input" id="newGender">
+                <option value="남">남</option>
+                <option value="여">여</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>나이</label>
+              <input type="number" class="form-input" id="newAge" placeholder="25">
+            </div>
+            <div class="form-group">
+              <label>등급</label>
+              <select class="form-input" id="newGrade">
+                <option value="일반회원">일반회원</option>
+                <option value="PT회원">PT회원</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>연락처</label>
+              <input type="text" class="form-input" id="newPhone" placeholder="010-0000-0000">
+            </div>
+            <div class="form-group">
+              <label>이용권 만료일</label>
+              <input type="date" class="form-input" id="newExpiry">
+            </div>
+            <div class="form-group full" style="display:flex; justify-content:flex-end;">
+              <button class="btn btn-primary" onclick="submitAddMember()">
+                <i class="fa-solid fa-plus"></i> 등록
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 회원 목록 -->
+        <div class="admin-section">
+          <div class="admin-section-title"><i class="fa-solid fa-list"></i>전체 회원 목록</div>
+          <div class="admin-table-wrap">
+            <table class="admin-table" id="memberTable">
+              <thead>
+                <tr>
+                  <th>ID</th><th>이름</th><th>성별</th><th>나이</th>
+                  <th>등급</th><th>연락처</th><th>만료일</th><th>배정 트레이너</th><th>상태</th>
+                </tr>
+              </thead>
+              <tbody id="memberTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 탭 2: 결제 관리 -->
+      <div class="admin-tab-panel" id="tab-payments">
+        <div class="admin-section">
+          <div class="admin-section-title"><i class="fa-solid fa-triangle-exclamation"></i>미수금 회원</div>
+          <div id="unpaidList"></div>
+        </div>
+        <div class="admin-section">
+          <div class="admin-section-title"><i class="fa-solid fa-receipt"></i>전체 결제 내역</div>
+          <div class="admin-table-wrap">
+            <table class="admin-table" id="paymentTable">
+              <thead>
+                <tr>
+                  <th>결제ID</th><th>회원명</th><th>상품</th><th>금액</th>
+                  <th>결제일</th><th>만료일</th><th>상태</th><th>처리</th>
+                </tr>
+              </thead>
+              <tbody id="paymentTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 탭 3: 기구 관리 -->
+      <div class="admin-tab-panel" id="tab-equipment">
+        <div class="admin-section">
+          <div class="admin-section-title"><i class="fa-solid fa-filter"></i>기구 상태 관리</div>
+          <div class="equip-filter-bar" id="equipFilterBar">
+            <button class="filter-chip active" onclick="filterEquip('전체',this)">전체</button>
+            <button class="filter-chip" onclick="filterEquip('정상',this)">정상</button>
+            <button class="filter-chip" onclick="filterEquip('점검중',this)">점검중</button>
+            <button class="filter-chip" onclick="filterEquip('고장',this)">고장</button>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table" id="equipTable">
+              <thead>
+                <tr>
+                  <th>ID</th><th>카테고리</th><th>기구명</th><th>수량</th><th>현재 상태</th><th>상태 변경</th>
+                </tr>
+              </thead>
+              <tbody id="equipTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 탭 4: 트레이너 매핑 -->
+      <div class="admin-tab-panel" id="tab-trainers">
+        <div class="admin-section">
+          <div class="admin-section-title"><i class="fa-solid fa-person-chalkboard"></i>트레이너별 담당 현황</div>
+          <div class="trainer-assign-grid" id="trainerAssignGrid"></div>
+        </div>
+        <div class="admin-section">
+          <div class="admin-section-title"><i class="fa-solid fa-arrows-rotate"></i>회원-트레이너 재배정</div>
+          <div class="admin-table-wrap">
+            <table class="admin-table" id="assignTable">
+              <thead>
+                <tr><th>회원 ID</th><th>이름</th><th>등급</th><th>현재 트레이너</th><th>재배정</th><th>적용</th></tr>
+              </thead>
+              <tbody id="assignTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- 로딩 오버레이 -->
+<div class="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text">데이터 불러오는 중...</div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
