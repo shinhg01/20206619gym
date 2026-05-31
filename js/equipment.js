@@ -83,7 +83,7 @@ function parseEquipmentRows(rows) {
     level:    String(r[9] || ''),
     method:   String(r[10] || ''),
     caution:  String(r[11] || ''),
-    youtube:  String(r[12] || ''),
+    youtube:  String(r[12] || r[6] || ''),  // 운동방법_유튜브 없으면 사용법 링크(col6) 사용
     imageUrl: String(r[13] || ''),
   }));
 }
@@ -324,10 +324,17 @@ function toDriveImgUrl(url) {
 // ── 유튜브 URL → 임베드 URL ──────────────────────────────────
 function toEmbedUrl(url) {
   if (!url || !url.trim()) return null;
-  const short = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+  // youtu.be/ID 단축 URL
+  const short = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
   if (short) return `https://www.youtube.com/embed/${short[1]}`;
-  const full  = url.match(/[?&]v=([a-zA-Z0-9_-]+)/);
-  if (full)  return `https://www.youtube.com/embed/${full[1]}`;
+  // youtube.com/watch?v=ID
+  const full = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+  if (full) return `https://www.youtube.com/embed/${full[1]}`;
+  // youtube.com/shorts/ID
+  const shorts = url.match(/shorts\/([a-zA-Z0-9_-]{11})/);
+  if (shorts) return `https://www.youtube.com/embed/${shorts[1]}`;
+  // 이미 embed URL인 경우
+  if (url.includes('youtube.com/embed/')) return url;
   return null;
 }
 
