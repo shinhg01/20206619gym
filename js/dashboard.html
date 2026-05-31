@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>아이언핏 GYM - 대시보드</title>
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Common Premium Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="appSidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon"><i class="fa-solid fa-dumbbell"></i></span>
+          <span class="logo-text">IRONFIT <span class="logo-highlight">GYM</span></span>
+        </div>
+      </div>
+      
+      <div class="sidebar-body">
+        <ul class="nav-list">
+          <li class="nav-item active">
+            <a href="dashboard.html">
+              <i class="fa-solid fa-chart-line"></i>
+              <span>대시보드</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="workout.html">
+              <i class="fa-solid fa-calendar-check"></i>
+              <span>운동 기록</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="body.html">
+              <i class="fa-solid fa-weight-scale"></i>
+              <span>신체 변화</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="diet.html">
+              <i class="fa-solid fa-utensils"></i>
+              <span>식단 기록</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="equipment.html">
+              <i class="fa-solid fa-circle-info"></i>
+              <span>기구 사용법</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="pt.html">
+              <i class="fa-solid fa-handshake"></i>
+              <span>PT 신청·일정</span>
+            </a>
+          </li>
+          
+          <!-- Role-Specific Tabs (Hidden by default, shown by JS) -->
+          <li class="nav-item role-trainer" style="display: none;">
+            <a href="trainer.html" style="border-left: 3px solid var(--color-primary);">
+              <i class="fa-solid fa-user-gear"></i>
+              <span>트레이너 관리</span>
+            </a>
+          </li>
+          <li class="nav-item role-admin" style="display: none;">
+            <a href="admin.html" style="border-left: 3px solid var(--color-primary);">
+              <i class="fa-solid fa-screwdriver-wrench"></i>
+              <span>시스템 관리자</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar" id="userAvatar">H</div>
+          <div class="user-info">
+            <div class="user-name" id="profileName">홍길동</div>
+            <div class="user-role" id="profileRole">일반회원</div>
+          </div>
+          <button class="btn-logout" id="logoutBtn" title="로그아웃">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Workspace Area -->
+    <div class="main-content">
+      
+      <!-- Top Responsive Header -->
+      <header class="main-header">
+        <div class="header-title">
+          <i class="fa-solid fa-bars hamburger-btn" id="menuToggle"></i>
+          <span id="welcomeMessage">안녕하세요, 회원님! 👋</span>
+        </div>
+        <div class="header-actions">
+          <span class="badge badge-primary" id="userGradeBadge">일반회원</span>
+        </div>
+      </header>
+
+      <!-- Page Content Area -->
+      <main class="page-body">
+        
+        <!-- 4 Summary Stats Cards Grid -->
+        <section class="grid-4" style="margin-bottom: 2rem;">
+          
+          <!-- Card 1: Attendance -->
+          <div class="card stat-card">
+            <div class="stat-info">
+              <span class="stat-label">이번 달 출석</span>
+              <span class="stat-value" id="valAttendance">0 / 20 일</span>
+              <span class="badge badge-success" style="margin-top: 0.5rem; align-self: flex-start; font-size: 0.7rem;" id="attendanceRate">0% 달성</span>
+            </div>
+            <div class="stat-icon-wrapper">
+              <i class="fa-solid fa-calendar-days"></i>
+            </div>
+          </div>
+          
+          <!-- Card 2: PT Sessions -->
+          <div class="card stat-card">
+            <div class="stat-info">
+              <span class="stat-label">PT 잔여 횟수</span>
+              <span class="stat-value" id="valPT">0 / 0 회</span>
+              <span class="badge badge-info" style="margin-top: 0.5rem; align-self: flex-start; font-size: 0.7rem;" id="ptProgress">이용권 미보유</span>
+            </div>
+            <div class="stat-icon-wrapper" style="background-color: #E8F0FE; color: var(--color-info);">
+              <i class="fa-solid fa-dumbbell"></i>
+            </div>
+          </div>
+          
+          <!-- Card 3: Today Calories -->
+          <div class="card stat-card">
+            <div class="stat-info">
+              <span class="stat-label">오늘 섭취 칼로리</span>
+              <span class="stat-value" id="valCalories">0 / 2000 kcal</span>
+              <span class="badge badge-warning" style="margin-top: 0.5rem; align-self: flex-start; font-size: 0.7rem;" id="caloriesRate">0% 섭취</span>
+            </div>
+            <div class="stat-icon-wrapper" style="background-color: #FFF8E6; color: var(--color-warning);">
+              <i class="fa-solid fa-utensils"></i>
+            </div>
+          </div>
+          
+          <!-- Card 4: Weight Change -->
+          <div class="card stat-card">
+            <div class="stat-info">
+              <span class="stat-label">최근 체중 변화</span>
+              <span class="stat-value" id="valWeightChange">0.0 kg</span>
+              <span class="badge" style="margin-top: 0.5rem; align-self: flex-start; font-size: 0.7rem;" id="weightChangeBadge">변화 없음</span>
+            </div>
+            <div class="stat-icon-wrapper" id="weightIconWrapper" style="background-color: #FAFBFD; color: var(--color-text-muted);">
+              <i class="fa-solid fa-weight-scale"></i>
+            </div>
+          </div>
+          
+        </section>
+
+        <!-- 2 Chart Visualizations Grid -->
+        <section class="grid-2">
+          
+          <!-- Chart Card 1: 30-Day Weight Trend -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i class="fa-solid fa-chart-line" style="color: var(--color-primary);"></i>
+                최근 30일 체중 변화 추이 (kg)
+              </h3>
+              <span class="badge badge-primary">신체 측정</span>
+            </div>
+            <div class="card-body" style="position: relative; height: 350px;">
+              <canvas id="weightChart"></canvas>
+            </div>
+          </div>
+          
+          <!-- Chart Card 2: Weekly Calorie Summary -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i class="fa-solid fa-chart-bar" style="color: var(--color-warning);"></i>
+                이번 주 칼로리 섭취량 (kcal)
+              </h3>
+              <span class="badge badge-warning">식단 분석</span>
+            </div>
+            <div class="card-body" style="position: relative; height: 350px;">
+              <canvas id="calorieChart"></canvas>
+            </div>
+          </div>
+          
+        </section>
+        
+      </main>
+      
+    </div>
+  </div>
+
+  <!-- Loading Indicator Component -->
+  <div class="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text">대시보드 통계 분석 중...</div>
+  </div>
+
+  <!-- Core Dynamic Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

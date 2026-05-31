@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>아이언핏 GYM - 운동 기록</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── 캘린더 ── */
+    .calendar-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .calendar-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--bg-primary);
+      min-width: 110px;
+      text-align: center;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+      margin-top: 0.5rem;
+    }
+    .cal-day-header {
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--color-text-muted);
+      padding: 0.4rem 0;
+    }
+    .cal-day {
+      text-align: center;
+      padding: 0.45rem 0.1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 500;
+      transition: background-color var(--transition-fast);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      min-height: 44px;
+      justify-content: center;
+    }
+    .cal-day:hover:not(.cal-empty) {
+      background-color: var(--color-primary-light);
+      color: var(--color-primary);
+    }
+    .cal-day.cal-today {
+      border: 2px solid var(--color-primary);
+      color: var(--color-primary);
+      font-weight: 800;
+    }
+    .cal-day.cal-selected {
+      background-color: var(--color-primary);
+      color: #FFF !important;
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(232, 89, 60, 0.35);
+    }
+    .cal-day.cal-empty {
+      cursor: default;
+    }
+    .cal-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background-color: var(--color-primary);
+    }
+    .cal-day.cal-selected .cal-dot {
+      background-color: rgba(255,255,255,0.8);
+    }
+    .cal-day.cal-sun { color: var(--color-danger); }
+    .cal-day.cal-sat { color: var(--color-info); }
+
+    /* ── 운동 기록 카드 ── */
+    .workout-card {
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.1rem 1.25rem;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+      background: #FAFBFD;
+    }
+    .workout-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+    .workout-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background-color: var(--color-primary-light);
+      color: var(--color-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    .workout-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .workout-title-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.35rem;
+    }
+    .workout-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--bg-primary);
+    }
+    .workout-stats {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+      margin-bottom: 0.3rem;
+    }
+    .workout-stat-item {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .workout-stat-item i {
+      color: var(--color-primary);
+      font-size: 0.75rem;
+    }
+    .workout-memo {
+      font-size: 0.82rem;
+      color: var(--color-text-muted);
+      background: #F3F4F6;
+      border-radius: 6px;
+      padding: 0.35rem 0.65rem;
+      margin-top: 0.4rem;
+    }
+    .workout-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      flex-shrink: 0;
+    }
+
+    /* ── 날짜 구분선 ── */
+    .date-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1.25rem 0 0.75rem;
+    }
+    .date-divider-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--color-text-muted);
+      white-space: nowrap;
+    }
+    .date-divider-line {
+      flex: 1;
+      height: 1px;
+      background-color: var(--border-color);
+    }
+
+    /* ── 빈 상태 ── */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--color-text-muted);
+    }
+    .empty-state i {
+      font-size: 2.5rem;
+      color: #D1D5DB;
+      margin-bottom: 0.75rem;
+      display: block;
+    }
+    .empty-state p {
+      font-size: 0.95rem;
+    }
+
+    /* ── 폼 그리드 ── */
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .form-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    /* ── 트레이너 선택바 ── */
+    .trainer-bar {
+      background: linear-gradient(135deg, var(--bg-secondary), #252545);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border-color-dark);
+    }
+    .trainer-bar-icon {
+      color: var(--color-primary);
+      font-size: 1.25rem;
+    }
+    .trainer-bar label {
+      color: var(--color-text-light);
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .trainer-bar .form-select {
+      background-color: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.15);
+      color: var(--color-text-light);
+    }
+    .trainer-bar .form-select option {
+      background-color: var(--bg-secondary);
+      color: var(--color-text-light);
+    }
+
+    /* ── 배지 색상 (부위별) ── */
+    .badge-chest    { background-color: #FDF0EE; color: var(--color-primary); }
+    .badge-back     { background-color: #E8F0FE; color: var(--color-info); }
+    .badge-leg      { background-color: #E6F4EA; color: var(--color-success); }
+    .badge-shoulder { background-color: #FFF8E6; color: var(--color-warning); }
+    .badge-etc      { background-color: #F3F4F6; color: #6B7280; }
+
+    /* ── 필터 요약 바 ── */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .filter-info {
+      font-size: 0.9rem;
+      color: var(--color-text-muted);
+    }
+    .filter-info strong {
+      color: var(--bg-primary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- ── 사이드바 ── -->
+    <aside class="sidebar" id="appSidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon"><i class="fa-solid fa-dumbbell"></i></span>
+          <span class="logo-text">IRONFIT <span class="logo-highlight">GYM</span></span>
+        </div>
+      </div>
+
+      <div class="sidebar-body">
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a href="dashboard.html">
+              <i class="fa-solid fa-chart-line"></i>
+              <span>대시보드</span>
+            </a>
+          </li>
+          <li class="nav-item active">
+            <a href="workout.html">
+              <i class="fa-solid fa-calendar-check"></i>
+              <span>운동 기록</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="body.html">
+              <i class="fa-solid fa-weight-scale"></i>
+              <span>신체 변화</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="diet.html">
+              <i class="fa-solid fa-utensils"></i>
+              <span>식단 기록</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="equipment.html">
+              <i class="fa-solid fa-circle-info"></i>
+              <span>기구 사용법</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="pt.html">
+              <i class="fa-solid fa-handshake"></i>
+              <span>PT 신청·일정</span>
+            </a>
+          </li>
+          <li class="nav-item role-trainer" style="display: none;">
+            <a href="trainer.html" style="border-left: 3px solid var(--color-primary);">
+              <i class="fa-solid fa-user-gear"></i>
+              <span>트레이너 관리</span>
+            </a>
+          </li>
+          <li class="nav-item role-admin" style="display: none;">
+            <a href="admin.html" style="border-left: 3px solid var(--color-primary);">
+              <i class="fa-solid fa-screwdriver-wrench"></i>
+              <span>시스템 관리자</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar" id="userAvatar">H</div>
+          <div class="user-info">
+            <div class="user-name" id="profileName">홍길동</div>
+            <div class="user-role" id="profileRole">일반회원</div>
+          </div>
+          <button class="btn-logout" id="logoutBtn" title="로그아웃">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- ── 메인 콘텐츠 ── -->
+    <div class="main-content">
+
+      <header class="main-header">
+        <div class="header-title">
+          <i class="fa-solid fa-bars hamburger-btn" id="menuToggle"></i>
+          <span id="welcomeMessage">운동 기록</span>
+        </div>
+        <div class="header-actions">
+          <span class="badge badge-primary" id="userGradeBadge">일반회원</span>
+        </div>
+      </header>
+
+      <main class="page-body">
+
+        <!-- 트레이너 전용 회원 선택 바 -->
+        <div class="trainer-bar" id="trainerBar" style="display: none;">
+          <i class="fa-solid fa-users trainer-bar-icon"></i>
+          <label for="memberSelect">담당 회원 조회</label>
+          <select id="memberSelect" class="form-select" style="max-width: 220px;">
+            <option value="">-- 회원 선택 --</option>
+          </select>
+          <span class="badge badge-primary" id="viewingBadge" style="display:none;"></span>
+        </div>
+
+        <!-- 상단 2분할: 캘린더 + 입력 폼 -->
+        <section style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 1.5rem; margin-bottom: 1.5rem; align-items: start;">
+
+          <!-- 캘린더 카드 -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i class="fa-solid fa-calendar-days" style="color: var(--color-primary);"></i>
+                월간 달력
+              </h3>
+              <div class="calendar-nav">
+                <button id="prevMonth" class="btn btn-secondary btn-sm"><i class="fa-solid fa-chevron-left"></i></button>
+                <span class="calendar-title" id="calendarTitle">2026년 5월</span>
+                <button id="nextMonth" class="btn btn-secondary btn-sm"><i class="fa-solid fa-chevron-right"></i></button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="calendar-grid" id="calendarGrid"></div>
+              <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button id="todayBtn" class="btn btn-outline btn-sm">
+                  <i class="fa-solid fa-crosshairs"></i> 오늘
+                </button>
+                <button id="showAllBtn" class="btn btn-secondary btn-sm">
+                  <i class="fa-solid fa-list"></i> 전체 보기
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 운동 추가/수정 폼 카드 -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title" id="formTitle">
+                <i class="fa-solid fa-plus-circle" style="color: var(--color-primary);"></i>
+                운동 추가
+              </h3>
+              <button id="resetFormBtn" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-rotate-left"></i> 초기화
+              </button>
+            </div>
+            <div class="card-body">
+              <form id="workoutForm" autocomplete="off">
+                <input type="hidden" id="editId" value="">
+
+                <div class="form-row-2" style="margin-bottom: 0.75rem;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label required" for="wDate">날짜</label>
+                    <input type="date" class="form-input" id="wDate" required>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label required" for="wPart">타겟 부위</label>
+                    <select class="form-select" id="wPart" required>
+                      <option value="">선택</option>
+                      <option value="가슴">가슴</option>
+                      <option value="등">등</option>
+                      <option value="어깨">어깨</option>
+                      <option value="이두">이두</option>
+                      <option value="삼두">삼두</option>
+                      <option value="하체">하체</option>
+                      <option value="복근">복근</option>
+                      <option value="유산소">유산소</option>
+                      <option value="전신">전신</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label required" for="wExercise">운동 종목</label>
+                  <select class="form-select" id="wExercise" required>
+                    <option value="">← 먼저 타겟 부위를 선택하세요</option>
+                  </select>
+                  <!-- 직접 입력 fallback (운동 종목 선택 후 "직접 입력" 선택 시 노출) -->
+                  <input type="text" class="form-input" id="wExerciseCustom"
+                         placeholder="운동 종목명을 직접 입력하세요"
+                         style="display:none; margin-top: 0.5rem;">
+                </div>
+
+                <div class="form-row-3" style="margin-bottom: 0.75rem;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label required" for="wSets">세트 수</label>
+                    <input type="number" class="form-input" id="wSets" placeholder="3" min="1" max="99" required>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label required" for="wWeight">중량 (kg)</label>
+                    <input type="number" class="form-input" id="wWeight" placeholder="0=맨몸" min="0" max="999" step="0.5" required>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label required" for="wReps">횟수 (Reps)</label>
+                    <input type="number" class="form-input" id="wReps" placeholder="10" min="1" max="999" required>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="wMemo">메모 <span style="font-weight:400; color:var(--color-text-muted);">(선택)</span></label>
+                  <textarea class="form-textarea" id="wMemo" placeholder="오늘의 컨디션, 개선사항 등..." rows="2" style="min-height: 70px;"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-full" id="submitBtn">
+                  <i class="fa-solid fa-floppy-disk"></i>
+                  <span id="submitBtnText">운동 기록 저장</span>
+                </button>
+              </form>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- 운동 기록 목록 -->
+        <section>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i class="fa-solid fa-list-check" style="color: var(--color-primary);"></i>
+                운동 기록 목록
+              </h3>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="badge badge-primary" id="totalCountBadge">0건</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="filter-bar" id="filterBar" style="display: none;">
+                <span class="filter-info" id="filterInfo"></span>
+                <button class="btn btn-secondary btn-sm" id="clearFilterBtn">
+                  <i class="fa-solid fa-xmark"></i> 필터 해제
+                </button>
+              </div>
+              <div id="workoutList">
+                <!-- 동적 렌더링 -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- 로딩 오버레이 -->
+  <div class="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text">운동 기록 불러오는 중...</div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/workout.js"></script>
+</body>
+</html>
