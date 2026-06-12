@@ -26,6 +26,12 @@ const AVATAR_COLORS = [
   { bg: '#FFF8E6', color: 'var(--color-warning)'  },
 ];
 
+// 예약 가능 여부로 취급할 트레이너 상태 값
+const ACTIVE_TRAINER_STATUSES = ['활동중', '재직'];
+function isTrainerActive(t) {
+  return ACTIVE_TRAINER_STATUSES.includes(t.status);
+}
+
 // ── 초기화 ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -269,12 +275,12 @@ function renderTrainerGrid() {
             <i class="fa-solid fa-users" style="font-size:0.75rem;"></i>
             담당 ${t.assignedCount || 0}명
           </span>
-          ${t.status === '활동중'
+          ${isTrainerActive(t)
             ? `<span class="badge badge-success">예약 가능</span>`
             : `<span class="badge badge-danger">예약 불가</span>`}
         </div>
 
-        ${t.status === '활동중'
+        ${isTrainerActive(t)
           ? `<div style="text-align:center; padding-top:0.25rem;">
                <div class="btn btn-outline btn-sm w-full" style="pointer-events:none;">
                  <i class="fa-solid fa-calendar-week"></i> 시간표 보기
@@ -428,7 +434,7 @@ function proceedToApply() {
 // ── 트레이너 선택 (PT 신청 폼 열기) ─────────────────────────
 function selectTrainer(id) {
   const t = trainers.find(x => x.id === id);
-  if (!t || t.status !== '활동중') return;
+  if (!t || !isTrainerActive(t)) return;
 
   selectedTrainer  = t;
   selectedSessions = 0;
