@@ -541,8 +541,13 @@ function handleMockGet(action, params) {
       return { members, stats, weeklySchedule };
     }
 
-    case 'getPTRequests':
-      return MOCK_PT_REQUESTS.filter(r => r.상태 === '대기중');
+    case 'getPTRequests': {
+      let list = MOCK_PT_REQUESTS.filter(r => r.상태 === '대기중');
+      if (params.trainerId) {
+        list = list.filter(r => r.트레이너ID === params.trainerId);
+      }
+      return list;
+    }
 
     case 'getTrainerSchedule': {
       const tid = params.trainerId;
@@ -682,8 +687,18 @@ function handleMockPost(action, body) {
       return { success: true };
     }
 
-    case 'registerPT':
+    case 'registerPT': {
+      const memberName = sessionStorage.getItem(CONFIG.SESSION_KEYS.USER_NAME) || body.userId;
+      MOCK_PT_REQUESTS.push({
+        신청ID: `PTREQ${Date.now()}`,
+        회원명: memberName,
+        트레이너ID: body.trainerId,
+        트레이너명: body.trainerName,
+        신청일시: new Date().toISOString().slice(0,16).replace('T',' '),
+        상태: '대기중'
+      });
       return { success: true, ptId: `PT_${Date.now()}` };
+    }
 
     case 'markAttendance':
       return { success: true };
@@ -698,6 +713,9 @@ function handleMockPost(action, body) {
       return { success: true };
 
     case 'assignTrainer':
+      return { success: true };
+
+    case 'removePTMember':
       return { success: true };
 
     case 'updatePTRequest': {

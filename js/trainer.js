@@ -12,6 +12,7 @@ let dashStats        = {};
 let currentTrainerId = '';
 let currentUserId    = '';
 let currentRole      = '';
+let myPTRequests     = [];
 
 // 회원 상세 모달 상태
 let detailMemberId   = null;
@@ -107,12 +108,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('[TRAINER] 데이터 로드 실패:', e);
   }
 
+  // PT 신청 대기 알람 (관리자는 전체, 트레이너는 본인 담당 신청만)
+  try {
+    const ptParams = role === '관리자' ? {} : { trainerId: currentTrainerId };
+    const ptData   = await callGet('getPTRequests', ptParams);
+    myPTRequests   = Array.isArray(ptData) ? ptData : [];
+  } catch(e) {
+    console.error('[TRAINER] PT 신청 목록 로드 실패:', e);
+  }
+
   // 렌더링
+  renderPTRequests();
   renderStatCards();
   renderTodaySessions();
   renderWeeklyGrid();
   renderMemberTable();
 });
+
+// ── PT 신청 대기 알람 카드 ───────────────────────────────────
+function renderPTRequests() {
+  const listEl  = document.getElementById('ptRequestList');
+  const badgeEl = document.getElementById('ptAlarmBadge');
+
+  if (myPTRequests.length === 0) {
+    badgeEl.style.display = 'none';
+    listEl.innerHTML = '<div style="color:var(--color-text-muted); font-size:0.85rem; padding:0.5rem 0;">현재 대기 중인 PT 신청이 없습니다.</div>';
+    return;
+  }
+
+  badgeEl.textContent = myPTRequests.length;
+  badgeEl.style.display = '';
+
+  listEl.innerHTML = myPTRequests.map(r => `
+    <div class="pt-request-item" data-id="${escHtml(r.신청ID)}">
+      <div class="pt-req-name">${escHtml(r.회원명)} 회원</div>
+      <div class="pt-req-meta">
+        담당 트레이너: ${escHtml(r.트레이너명)}<br>
+        신청일시: ${escHtml(r.신청일시)}
+      </div>
+      <div class="pt-request-actions">
+        <button class="btn-approve" onclick="respondPTRequest('${escHtml(r.신청ID)}','승인',this)">승인</button>
+        <button class="btn-reject" onclick="respondPTRequest('${escHtml(r.신청ID)}','거절',this)">거절</button>
+      </div>
+    </div>`).join('');
+}
+
+async function respondPTRequest(requestId, status, btn) {
+  const item = btn.closest('.pt-request-item');
+  item.style.opacity = '0.5';
+  btn.parentElement.querySelectorAll('button').forEach(b => b.disabled = true);
+
+  try {
+    await callPost('updatePTRequest', { 신청ID: requestId, 상태: status });
+    myPTRequests = myPTRequests.filter(r => r.신청ID !== requestId);
+    showToast(status === '승인' ? '승인되었습니다' : '거절되었습니다');
+    renderPTRequests();
+  } catch(e) {
+    item.style.opacity = '1';
+    btn.parentElement.querySelectorAll('button').forEach(b => b.disabled = false);
+    showToast('처리 중 오류가 발생했습니다.', 'danger');
+  }
+}
 
 // ── 통계 카드 ────────────────────────────────────────────────
 function renderStatCards() {
@@ -315,9 +371,40 @@ function renderMemberTable() {
           <button class="btn btn-outline btn-sm" onclick="openMemberModal('${escHtml(m.memberId)}','${escHtml(m.memberName)}')">
             <i class="fa-solid fa-magnifying-glass"></i> 상세 조회
           </button>
+          <button class="btn btn-danger btn-sm" style="margin-left:0.4rem;" onclick="removePTMember('${escHtml(m.memberId)}','${escHtml(m.memberName)}')">
+            <i class="fa-solid fa-user-minus"></i> 제거
+          </button>
         </td>
       </tr>`;
   }).join('');
+}
+
+// ── PT 회원 제거 ─────────────────────────────────────────────
+async function removePTMember(memberId, memberName) {
+  if (!confirm(`${memberName} 회원을 담당 PT 회원에서 제거하시겠습니까?\n(일반회원으로 전환되고 트레이너 배정이 해제됩니다)`)) return;
+
+  try {
+    await callPost('removePTMember', { memberId });
+    dashMembers = dashMembers.filter(m => m.memberId !== memberId);
+    Object.keys(weeklySchedule).forEach(day => {
+      weeklySchedule[day] = weeklySchedule[day].filter(s => s.memberId !== memberId);
+    });
+
+    // 통계 재계산
+    dashStats.memberCount = dashMembers.length;
+    dashStats.totalRemaining = dashMembers.reduce((s, m) => s + (m.remainingSessions || 0), 0);
+    dashStats.avgAttendance = dashMembers.length > 0
+      ? Math.round(dashMembers.reduce((s, m) => s + (m.attendanceRate || 0), 0) / dashMembers.length)
+      : 0;
+
+    renderStatCards();
+    renderTodaySessions();
+    renderWeeklyGrid();
+    renderMemberTable();
+    showToast(`${memberName} 회원이 담당 PT 회원에서 제거되었습니다.`);
+  } catch(e) {
+    showToast('제거 중 오류가 발생했습니다.', 'danger');
+  }
 }
 
 // ── 회원 상세 모달 ───────────────────────────────────────────

@@ -470,6 +470,9 @@ function renderTrainerMapping() {
         <button class="btn-pay" onclick="applyAssign('${escHtml(m.id)}','${escHtml(m.name)}')">
           <i class="fa-solid fa-check"></i> 적용
         </button>
+        <button class="btn-remove" onclick="removePTMember('${escHtml(m.id)}','${escHtml(m.name)}')">
+          <i class="fa-solid fa-user-minus"></i> 제거
+        </button>
       </td>
     </tr>`).join('');
 }
@@ -488,6 +491,21 @@ async function applyAssign(memberId, memberName) {
     renderMemberTable();
   } catch(e) {
     alert('배정 중 오류가 발생했습니다.');
+  }
+}
+
+async function removePTMember(memberId, memberName) {
+  if (!confirm(`${memberName} 회원을 PT 회원에서 제거하시겠습니까?\n(일반회원으로 전환되고 담당 트레이너 배정이 해제됩니다)`)) return;
+  try {
+    await callPost('removePTMember', { memberId });
+    const m = allMembers.find(x => x.id === memberId);
+    if (m) { m.grade = '일반회원'; m.trainer = ''; }
+    showToast(`${memberName} 회원이 PT 회원에서 제거되었습니다.`);
+    renderTrainerMapping();
+    renderMemberTable();
+    renderStatCards();
+  } catch(e) {
+    alert('제거 중 오류가 발생했습니다.');
   }
 }
 

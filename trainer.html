@@ -161,6 +161,42 @@
     .wg-session.today-session .s-time { color: #C2410C; }
     .wg-time-label { font-size: 0.72rem; color: var(--color-text-muted); font-weight: 600; padding: 0.5rem 0.75rem; font-family: var(--font-en); white-space: nowrap; }
 
+    /* ── PT 신청 대기 알람 ── */
+    .pt-alarm-badge {
+      background: var(--color-danger);
+      color: #FFF;
+      font-size: 0.72rem;
+      font-weight: 700;
+      border-radius: 99px;
+      padding: 0.15rem 0.55rem;
+      margin-left: 0.5rem;
+    }
+    .pt-request-item {
+      background: #FFF7ED;
+      border: 1.5px solid #FED7AA;
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-width: 220px;
+      flex: 1;
+      max-width: 320px;
+    }
+    .pt-req-name { font-weight: 700; font-size: 0.92rem; }
+    .pt-req-meta { font-size: 0.78rem; color: var(--color-text-muted); line-height: 1.5; }
+    .pt-request-actions { display: flex; gap: 0.5rem; margin-top: 0.25rem; }
+    .pt-request-actions button {
+      flex: 1; padding: 0.4rem 0; border-radius: 8px; border: none;
+      font-weight: 700; font-size: 0.82rem; cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    .pt-request-actions button:disabled { opacity: 0.5; cursor: default; }
+    .btn-approve { background: var(--color-success); color: #FFF; }
+    .btn-approve:hover:not(:disabled) { background: #16A34A; }
+    .btn-reject  { background: var(--color-danger); color: #FFF; }
+    .btn-reject:hover:not(:disabled) { background: #DC2626; }
+
     /* ── 담당 회원 테이블 ── */
     .member-progress-bar {
       height: 6px;
@@ -310,6 +346,20 @@
     </header>
 
     <main class="page-body">
+
+      <!-- PT 신청 대기 알람 -->
+      <section class="card" id="ptAlarmCard" style="margin-bottom:1.75rem;">
+        <div class="card-header">
+          <h3 class="card-title">
+            <i class="fa-solid fa-bell" style="color:var(--color-danger);"></i>
+            PT 신청 대기 중
+            <span class="pt-alarm-badge" id="ptAlarmBadge" style="display:none;">0</span>
+          </h3>
+        </div>
+        <div class="card-body">
+          <div id="ptRequestList" style="display:flex; flex-wrap:wrap; gap:0.75rem;"></div>
+        </div>
+      </section>
 
       <!-- 통계 카드 -->
       <div class="trainer-stat-grid" id="statGrid"></div>

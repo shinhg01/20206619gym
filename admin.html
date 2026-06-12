@@ -224,6 +224,21 @@
     .btn-pay:hover { opacity: 0.85; }
     .btn-pay:disabled { background: var(--border-color); color: var(--color-text-muted); cursor: default; }
 
+    /* ── PT 회원 제거 버튼 ── */
+    .btn-remove {
+      padding: 0.3rem 0.75rem;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--color-danger);
+      border: 1.5px solid var(--color-danger);
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-left: 0.4rem;
+    }
+    .btn-remove:hover { background: var(--color-danger); color: #FFF; }
+
     /* ── 상태 변경 버튼 그룹 ── */
     .status-btn-group { display: flex; gap: 4px; }
     .status-btn {
