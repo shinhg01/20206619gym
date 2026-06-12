@@ -384,7 +384,11 @@ async function removePTMember(memberId, memberName) {
   if (!confirm(`${memberName} 회원을 담당 PT 회원에서 제거하시겠습니까?\n(일반회원으로 전환되고 트레이너 배정이 해제됩니다)`)) return;
 
   try {
-    await callPost('removePTMember', { memberId });
+    const res = await callPost('removePTMember', { memberId });
+    if (res && res.success === false) {
+      showToast(res.message || '제거에 실패했습니다.', 'danger');
+      return;
+    }
     dashMembers = dashMembers.filter(m => m.memberId !== memberId);
     Object.keys(weeklySchedule).forEach(day => {
       weeklySchedule[day] = weeklySchedule[day].filter(s => s.memberId !== memberId);

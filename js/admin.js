@@ -497,7 +497,11 @@ async function applyAssign(memberId, memberName) {
 async function removePTMember(memberId, memberName) {
   if (!confirm(`${memberName} 회원을 PT 회원에서 제거하시겠습니까?\n(일반회원으로 전환되고 담당 트레이너 배정이 해제됩니다)`)) return;
   try {
-    await callPost('removePTMember', { memberId });
+    const res = await callPost('removePTMember', { memberId });
+    if (res && res.success === false) {
+      alert(res.message || '제거에 실패했습니다.');
+      return;
+    }
     const m = allMembers.find(x => x.id === memberId);
     if (m) { m.grade = '일반회원'; m.trainer = ''; }
     showToast(`${memberName} 회원이 PT 회원에서 제거되었습니다.`);
