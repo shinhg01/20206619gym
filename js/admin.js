@@ -5,11 +5,12 @@
  */
 
 // ── 전역 상태 ────────────────────────────────────────────────
-let allMembers   = [];
-let allPayments  = [];
-let allEquipment = [];
-let allTrainers  = [];
-let equipFilter  = '전체';
+let allMembers     = [];
+let allPayments    = [];
+let allEquipment   = [];
+let allTrainers    = [];
+let allPTRequests  = [];
+let equipFilter    = '전체';
 
 // 기본값 — getTrainers 로드 후 덮어씀
 let TRAINER_LIST = [
@@ -54,16 +55,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadAllData() {
   try {
-    const [memberRows, payRows, equipRows, trainerRows] = await Promise.all([
+    const [memberRows, payRows, equipRows, trainerRows, ptRequestRows] = await Promise.all([
       callGet('getMembers',  {}),
       callGet('getPayments', {}),
       callGet('getEquipment', {}),
       callGet('getTrainers', {}),
+      callGet('getPTRequests', {}),
     ]);
-    allMembers   = parseMemberRows(memberRows);
-    allPayments  = parsePaymentRows(payRows);
-    allEquipment = parseEquipRows(equipRows);
-    allTrainers  = parseTrainerRows(trainerRows);
+    allMembers    = parseMemberRows(memberRows);
+    allPayments   = parsePaymentRows(payRows);
+    allEquipment  = parseEquipRows(equipRows);
+    allTrainers   = parseTrainerRows(trainerRows);
+    allPTRequests = Array.isArray(ptRequestRows) ? ptRequestRows : [];
     if (allTrainers.length > 0) TRAINER_LIST = allTrainers;
   } catch (e) {
     console.error('[ADMIN] 데이터 로드 실패:', e);
@@ -135,12 +138,61 @@ function switchTab(tab) {
 
 // ── 전체 렌더 ────────────────────────────────────────────────
 function renderAll() {
+  renderPTRequests();
   renderStatCards();
   renderMemberTable();
   renderPayments();
   renderEquipTable();
   renderTrainerMapping();
   updateBadges();
+}
+
+// ── PT 신청 대기 알람 카드 ────────────────────────────────────
+function renderPTRequests() {
+  const listEl  = document.getElementById('ptRequestList');
+  const badgeEl = document.getElementById('ptAlarmBadge');
+
+  if (allPTRequests.length === 0) {
+    badgeEl.style.display = 'none';
+    listEl.innerHTML = '<div style="color:var(--color-text-muted); font-size:0.85rem; padding:0.5rem 0;">현재 대기 중인 PT 신청이 없습니다.</div>';
+    return;
+  }
+
+  badgeEl.textContent = allPTRequests.length;
+  badgeEl.style.display = '';
+
+  listEl.innerHTML = `
+    <div style="display:flex; flex-wrap:wrap; gap:0.75rem;">
+      ${allPTRequests.map(r => `
+        <div class="pt-request-item" data-id="${escHtml(r.신청ID)}">
+          <div class="pt-req-name">${escHtml(r.트레이너명)} 트레이너</div>
+          <div class="pt-req-meta">
+            신청일시: ${escHtml(r.신청일시)}<br>
+            회원: ${escHtml(r.회원명)}
+          </div>
+          <div class="pt-request-actions">
+            <button class="btn-approve" onclick="respondPTRequest('${escHtml(r.신청ID)}','승인',this)">승인</button>
+            <button class="btn-reject" onclick="respondPTRequest('${escHtml(r.신청ID)}','거절',this)">거절</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+async function respondPTRequest(requestId, status, btn) {
+  const item = btn.closest('.pt-request-item');
+  item.style.opacity = '0.5';
+  btn.parentElement.querySelectorAll('button').forEach(b => b.disabled = true);
+
+  try {
+    await callPost('updatePTRequest', { 신청ID: requestId, 상태: status });
+    allPTRequests = allPTRequests.filter(r => r.신청ID !== requestId);
+    showToast(status === '승인' ? '승인되었습니다' : '거절되었습니다');
+    renderPTRequests();
+  } catch (e) {
+    item.style.opacity = '1';
+    btn.parentElement.querySelectorAll('button').forEach(b => b.disabled = false);
+    alert('처리 중 오류가 발생했습니다.');
+  }
 }
 
 // ── 요약 통계 카드 ────────────────────────────────────────────

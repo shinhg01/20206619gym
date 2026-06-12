@@ -256,6 +256,40 @@
       min-width: 110px;
     }
 
+    /* ── PT 신청 대기 알람 카드 ── */
+    .pt-alarm-card .admin-section-title { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+    .pt-alarm-badge {
+      background: var(--color-danger);
+      color: #fff;
+      border-radius: 99px;
+      padding: 2px 9px;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+    .pt-request-item {
+      background: var(--bg-secondary);
+      border: 1.5px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      min-width: 240px;
+      transition: opacity 0.2s;
+    }
+    .pt-request-item .pt-req-name { font-size: 0.95rem; font-weight: 800; margin-bottom: 0.35rem; }
+    .pt-request-item .pt-req-meta { font-size: 0.78rem; color: var(--color-text-muted); line-height: 1.6; }
+    .pt-request-actions { margin-top: 0.65rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
+    .btn-approve, .btn-reject {
+      padding: 0.3rem 0.9rem;
+      border-radius: 6px;
+      border: none;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-approve { background: var(--color-primary); color: #fff; }
+    .btn-reject  { background: var(--color-danger);  color: #fff; }
+    .btn-approve:hover, .btn-reject:hover { opacity: 0.85; }
+
     @media (max-width: 1024px) {
       .stat-row { grid-template-columns: repeat(2, 1fr); }
       .trainer-assign-grid { grid-template-columns: repeat(2, 1fr); }
@@ -320,6 +354,15 @@
     </header>
 
     <main class="page-body">
+
+      <!-- PT 신청 대기 알람 카드 -->
+      <div class="admin-section pt-alarm-card" id="ptAlarmCard">
+        <div class="admin-section-title">
+          <i class="fa-solid fa-bell"></i>PT 신청 대기 중
+          <span class="pt-alarm-badge" id="ptAlarmBadge" style="display:none;">0</span>
+        </div>
+        <div id="ptRequestList"></div>
+      </div>
 
       <!-- 요약 통계 -->
       <div class="stat-row" id="adminStatRow"></div>

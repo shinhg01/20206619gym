@@ -192,6 +192,12 @@ function getMockWorkouts(userId) {
   return MOCK_WORKOUTS[userId];
 }
 
+// 세션 중 승인/거절이 반영되는 인메모리 PT 신청 대기 저장소
+const MOCK_PT_REQUESTS = [
+  { 신청ID: 'PTREQ001', 회원명: '홍길동', 트레이너ID: 'T001', 트레이너명: '김코치', 신청일시: '2026-06-10 14:30', 상태: '대기중' },
+  { 신청ID: 'PTREQ002', 회원명: '김영희', 트레이너ID: 'T002', 트레이너명: '이지수', 신청일시: '2026-06-11 10:00', 상태: '대기중' },
+];
+
 function handleMockGet(action, params) {
   switch (action) {
     case 'getDashboard':
@@ -535,6 +541,9 @@ function handleMockGet(action, params) {
       return { members, stats, weeklySchedule };
     }
 
+    case 'getPTRequests':
+      return MOCK_PT_REQUESTS.filter(r => r.상태 === '대기중');
+
     case 'getTrainerSchedule': {
       const tid = params.trainerId;
       const allDays = ['월','화','수','목','금','토','일'];
@@ -690,6 +699,12 @@ function handleMockPost(action, body) {
 
     case 'assignTrainer':
       return { success: true };
+
+    case 'updatePTRequest': {
+      const req = MOCK_PT_REQUESTS.find(r => r.신청ID === body.신청ID);
+      if (req) req.상태 = body.상태;
+      return { success: true };
+    }
 
     default:
       return { success: true };
