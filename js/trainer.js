@@ -144,8 +144,7 @@ function renderPTRequests() {
     <div class="pt-request-item" data-id="${escHtml(r.신청ID)}">
       <div class="pt-req-name">${escHtml(r.회원명)} 회원</div>
       <div class="pt-req-meta">
-        담당 트레이너: ${escHtml(r.트레이너명)}<br>
-        신청일시: ${escHtml(r.신청일시)}
+        신청일시: ${escHtml(r.신청일시)}${r.선호요일 ? `<br>선호 요일: ${escHtml(r.선호요일)}` : ''}${r.선호시간 ? ` · ${escHtml(r.선호시간)}` : ''}${r.선호세션수 ? ` · ${escHtml(String(r.선호세션수))}회` : ''}
       </div>
       <div class="pt-request-actions">
         <button class="btn-approve" onclick="openApprovalModal('${escHtml(r.신청ID)}')">승인</button>

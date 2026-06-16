@@ -814,30 +814,40 @@ function assignTrainer(body) {
 function registerPT(body) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
 
-  const ptSheet = ss.getSheetByName(SHEET_NAMES.pt);
-  if (ptSheet) {
-    const ptId     = `PT_${new Date().getTime()}`;
-    const today    = Utilities.formatDate(new Date(), 'GMT+9', 'yyyy-MM-dd');
-    const sessions = Number(body.sessions) || 0;
-    ptSheet.appendRow([
-      ptId, body.trainerId, body.trainerName || '',
-      body.userId, '',
-      sessions, sessions, 0,
-      body.days || '', body.time || '',
-      today, '', 0, '대기중'
-    ]);
-  }
-
-  const memberSheet = ss.getSheetByName(SHEET_NAMES.members);
-  if (memberSheet) {
-    const rows = memberSheet.getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
-      if (String(rows[i][0]).trim() === String(body.userId).trim()) {
-        memberSheet.getRange(i + 1, 8).setValue(body.trainerName || '');
-        break;
+  // 회원명 조회
+  let memberName = body.memberName || '';
+  if (!memberName) {
+    const memSheet = ss.getSheetByName(SHEET_NAMES.members);
+    if (memSheet) {
+      const rows = memSheet.getDataRange().getValues();
+      for (let i = 1; i < rows.length; i++) {
+        if (String(rows[i][0]).trim() === String(body.userId).trim()) {
+          memberName = rows[i][1];
+          break;
+        }
       }
     }
   }
+
+  // 6_PT신청대기에 신청 행 추가 (트레이너가 승인하기 전까지 대기)
+  // 컬럼: 신청ID(A), 회원명(B), 트레이너ID(C), 트레이너명(D), 신청일시(E), 상태(F), 회원ID(G), 선호요일(H), 선호시간(I), 선호세션수(J)
+  const reqSheet = ss.getSheetByName(SHEET_NAMES.ptRequests);
+  if (!reqSheet) return { success: false, message: 'PT신청 시트 없음' };
+
+  const reqId = `PTREQ_${new Date().getTime()}`;
+  const now   = Utilities.formatDate(new Date(), 'GMT+9', 'yyyy-MM-dd HH:mm');
+  reqSheet.appendRow([
+    reqId,
+    memberName,
+    body.trainerId   || '',
+    body.trainerName || '',
+    now,
+    '대기중',
+    body.userId      || '',
+    body.days        || '',
+    body.time        || '',
+    Number(body.sessions) || 0
+  ]);
 
   return { success: true };
 }
@@ -867,12 +877,16 @@ function getPTRequests(trainerId) {
         ? Utilities.formatDate(applyDate, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm')
         : String(applyDate);
       return {
-        신청ID:   r[0],
-        회원명:   r[1],
+        신청ID:    r[0],
+        회원명:    r[1],
         트레이너ID: r[2],
         트레이너명: r[3],
-        신청일시: formatted,
-        상태:     r[5]
+        신청일시:  formatted,
+        상태:      r[5],
+        회원ID:    r[6] || '',
+        선호요일:  r[7] || '',
+        선호시간:  r[8] || '',
+        선호세션수: Number(r[9]) || 0
       };
     });
 }
@@ -899,18 +913,36 @@ function updatePTRequest(body) {
  */
 function removePTMember(body) {
   const ss    = SpreadsheetApp.openById(SHEET_ID);
+
+  // 1) 2_회원명단: 등급 → 일반회원, 배정 트레이너 해제
   const sheet = ss.getSheetByName(SHEET_NAMES.members);
   if (!sheet) return { success: false, message: '회원 시트 없음' };
   const rows  = sheet.getDataRange().getValues();
+  let memberName = '';
 
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]).trim() === String(body.memberId).trim()) {
+      memberName = rows[i][1];
       sheet.getRange(i + 1, 5).setValue('일반회원'); // E열 = 등급
       sheet.getRange(i + 1, 8).setValue('');          // H열 = 배정 트레이너
-      return { success: true };
+      break;
     }
   }
-  return { success: false, message: '회원ID를 찾을 수 없습니다: ' + body.memberId };
+
+  // 2) 3_PT일정: 해당 회원의 진행중 계약 → '취소' 상태로 변경
+  const ptSheet = ss.getSheetByName(SHEET_NAMES.pt);
+  if (ptSheet) {
+    const ptRows = ptSheet.getDataRange().getValues();
+    for (let i = 1; i < ptRows.length; i++) {
+      const isMember = String(ptRows[i][3]).trim() === String(body.memberId).trim()
+                    || (memberName && String(ptRows[i][4]).trim() === String(memberName).trim());
+      if (isMember && String(ptRows[i][13]).trim() === '진행중') {
+        ptSheet.getRange(i + 1, 14).setValue('취소'); // N열 = status
+      }
+    }
+  }
+
+  return { success: true };
 }
 
 /**
@@ -930,12 +962,14 @@ function approvePTRequest(body) {
 
   const reqRows = reqSheet.getDataRange().getValues();
   let memberNameFromSheet = body.회원명;
+  let memberIdFromSheet   = '';
   let found = false;
 
   for (let i = 1; i < reqRows.length; i++) {
     if (String(reqRows[i][0]).trim() === String(body.신청ID).trim()) {
       reqSheet.getRange(i + 1, 6).setValue('승인');
       memberNameFromSheet = reqRows[i][1] || body.회원명;
+      memberIdFromSheet   = reqRows[i][6] || '';   // G열 = 회원ID
       found = true;
       break;
     }
@@ -955,7 +989,7 @@ function approvePTRequest(body) {
     ptId,
     body.트레이너ID   || '',
     body.트레이너명   || '',
-    '',                          // memberId: 신청 데이터에 없어 빈값
+    memberIdFromSheet,           // memberId: 신청 데이터의 G열에서 조회
     memberNameFromSheet,
     sessions,
     sessions,

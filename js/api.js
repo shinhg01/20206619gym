@@ -694,14 +694,18 @@ function handleMockPost(action, body) {
     case 'registerPT': {
       const memberName = sessionStorage.getItem(CONFIG.SESSION_KEYS.USER_NAME) || body.userId;
       MOCK_PT_REQUESTS.push({
-        신청ID: `PTREQ${Date.now()}`,
-        회원명: memberName,
+        신청ID:    `PTREQ${Date.now()}`,
+        회원명:    memberName,
         트레이너ID: body.trainerId,
         트레이너명: body.trainerName,
-        신청일시: new Date().toISOString().slice(0,16).replace('T',' '),
-        상태: '대기중'
+        신청일시:  new Date().toISOString().slice(0,16).replace('T',' '),
+        상태:     '대기중',
+        회원ID:   body.userId   || '',
+        선호요일:  body.days     || '',
+        선호시간:  body.time     || '',
+        선호세션수: Number(body.sessions) || 0
       });
-      return { success: true, ptId: `PT_${Date.now()}` };
+      return { success: true };
     }
 
     case 'markAttendance':
