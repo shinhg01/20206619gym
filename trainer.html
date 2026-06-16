@@ -285,6 +285,109 @@
     }
     .comment-date { font-size: 0.72rem; color: var(--color-text-muted); margin-bottom: 0.25rem; }
 
+    /* ── PT 계약 등록 모달 (라이트 테마) ── */
+    .approval-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 20000;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .approval-modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      width: 100%; max-width: 500px;
+      max-height: 92vh; overflow-y: auto;
+      padding: 1.75rem;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.25);
+      animation: slideDown 0.25s ease-out;
+    }
+    .approval-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+    .approval-modal-title { font-size: 1rem; font-weight: 800; color: var(--color-text-dark); }
+    .approval-info-box {
+      background: #F9FAFB;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1.25rem;
+      display: flex; gap: 2rem;
+    }
+    .approval-info-label { font-size: 0.72rem; color: var(--color-text-muted); margin-bottom: 0.2rem; }
+    .approval-info-value { font-weight: 700; font-size: 0.95rem; color: var(--color-text-dark); }
+    .approval-form-group { margin-bottom: 1rem; }
+    .approval-form-label {
+      font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted);
+      display: block; margin-bottom: 0.4rem;
+    }
+    .approval-form-label .required { color: var(--color-danger); margin-left: 2px; }
+    .approval-input {
+      background: #FFF; border: 1px solid var(--border-color);
+      border-radius: 8px; color: var(--color-text-dark);
+      font-size: 0.88rem; padding: 0.6rem 0.9rem;
+      width: 100%; box-sizing: border-box;
+      outline: none; transition: border-color 0.2s;
+    }
+    .approval-input:focus { border-color: var(--color-primary); }
+    .session-preset-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .session-preset-btn {
+      padding: 0.45rem 1rem; border-radius: 8px;
+      border: 1.5px solid var(--border-color);
+      background: transparent; color: var(--color-text-muted);
+      font-size: 0.82rem; font-weight: 700; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .session-preset-btn.active,
+    .session-preset-btn:hover {
+      border-color: var(--color-primary);
+      background: rgba(232,89,60,0.08);
+      color: var(--color-primary);
+    }
+    .session-preset-input {
+      width: 90px; border: 1px solid var(--border-color);
+      border-radius: 8px; font-size: 0.82rem;
+      padding: 0.45rem 0.75rem; outline: none;
+      background: #FFF; color: var(--color-text-dark);
+    }
+    .day-toggle-group { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .day-toggle { cursor: pointer; }
+    .day-toggle input[type="checkbox"] { display: none; }
+    .day-toggle span {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 1.5px solid var(--border-color);
+      font-size: 0.8rem; font-weight: 700;
+      color: var(--color-text-muted);
+      transition: all 0.15s;
+    }
+    .day-toggle input:checked + span {
+      background: var(--color-primary); color: #FFF;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(232,89,60,0.18);
+    }
+    .approval-modal-footer {
+      display: flex; gap: 0.75rem; justify-content: flex-end;
+      margin-top: 1.5rem; padding-top: 1.25rem;
+      border-top: 1px solid var(--border-color);
+    }
+    .approval-cancel-btn {
+      padding: 0.6rem 1.25rem; border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: transparent; color: var(--color-text-muted);
+      font-size: 0.88rem; font-weight: 600; cursor: pointer;
+    }
+    .approval-submit-btn {
+      padding: 0.6rem 1.5rem; border-radius: 8px;
+      border: none; background: var(--color-primary); color: #FFF;
+      font-size: 0.88rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 0.4rem;
+      transition: opacity 0.2s;
+    }
+    .approval-submit-btn:disabled { opacity: 0.5; cursor: default; }
+
     @media (max-width: 1024px) {
       .trainer-stat-grid { grid-template-columns: repeat(2, 1fr); }
     }
@@ -470,6 +573,97 @@
 <div class="loading-overlay">
   <div class="spinner"></div>
   <div class="loading-text">트레이너 정보 불러오는 중...</div>
+</div>
+
+<!-- PT 계약 등록 모달 -->
+<div id="trainerApprovalBackdrop" class="approval-backdrop" style="display:none" onclick="handleApprovalBackdrop(event)">
+  <div class="approval-modal">
+    <div class="approval-modal-header">
+      <span class="approval-modal-title">PT 계약 등록</span>
+      <button class="close-btn" onclick="closeApprovalModal()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--color-text-muted);">×</button>
+    </div>
+    <div class="approval-info-box">
+      <div class="approval-info-item">
+        <div class="approval-info-label">회원명</div>
+        <div class="approval-info-value" id="approvalMemberName">—</div>
+      </div>
+      <div class="approval-info-item">
+        <div class="approval-info-label">트레이너</div>
+        <div class="approval-info-value" id="approvalTrainerName">—</div>
+      </div>
+    </div>
+
+    <!-- 세션 수 -->
+    <div class="approval-form-group">
+      <label class="approval-form-label">총 세션 수<span class="required">*</span></label>
+      <div class="session-preset-group">
+        <button class="session-preset-btn" onclick="setApprovalSessions(this,10)">10회</button>
+        <button class="session-preset-btn" onclick="setApprovalSessions(this,20)">20회</button>
+        <button class="session-preset-btn" onclick="setApprovalSessions(this,30)">30회</button>
+        <input type="number" id="approvalSessions" class="approval-input session-preset-input" placeholder="직접입력" min="1" oninput="clearSessionPreset()" style="width:90px;">
+      </div>
+    </div>
+
+    <!-- 요일 -->
+    <div class="approval-form-group">
+      <label class="approval-form-label">PT 요일<span class="required">*</span></label>
+      <div class="day-toggle-group">
+        <label class="day-toggle"><input type="checkbox" name="approvalDay" value="월"><span>월</span></label>
+        <label class="day-toggle"><input type="checkbox" name="approvalDay" value="화"><span>화</span></label>
+        <label class="day-toggle"><input type="checkbox" name="approvalDay" value="수"><span>수</span></label>
+        <label class="day-toggle"><input type="checkbox" name="approvalDay" value="목"><span>목</span></label>
+        <label class="day-toggle"><input type="checkbox" name="approvalDay" value="금"><span>금</span></label>
+        <label class="day-toggle"><input type="checkbox" name="approvalDay" value="토"><span>토</span></label>
+        <label class="day-toggle"><input type="checkbox" name="approvalDay" value="일"><span>일</span></label>
+      </div>
+    </div>
+
+    <!-- 시간 -->
+    <div class="approval-form-group">
+      <label class="approval-form-label">PT 시간<span class="required">*</span></label>
+      <select id="approvalTime" class="approval-input">
+        <option value="">시간 선택</option>
+        <option>09:00</option><option>09:30</option>
+        <option>10:00</option><option>10:30</option>
+        <option>11:00</option><option>11:30</option>
+        <option>12:00</option><option>12:30</option>
+        <option>13:00</option><option>13:30</option>
+        <option>14:00</option><option>14:30</option>
+        <option>15:00</option><option>15:30</option>
+        <option>16:00</option><option>16:30</option>
+        <option>17:00</option><option>17:30</option>
+        <option>18:00</option><option>18:30</option>
+        <option>19:00</option><option>19:30</option>
+        <option>20:00</option><option>20:30</option>
+        <option>21:00</option>
+      </select>
+    </div>
+
+    <!-- 시작일 -->
+    <div class="approval-form-group">
+      <label class="approval-form-label">시작일<span class="required">*</span></label>
+      <input type="date" id="approvalStartDate" class="approval-input">
+    </div>
+
+    <!-- 금액 -->
+    <div class="approval-form-group">
+      <label class="approval-form-label">PT 금액 (원)</label>
+      <input type="number" id="approvalAmount" class="approval-input" placeholder="예: 300000" min="0">
+    </div>
+
+    <!-- 메모 -->
+    <div class="approval-form-group">
+      <label class="approval-form-label">메모</label>
+      <textarea id="approvalMemo" class="approval-input" rows="2" placeholder="특이사항, 목표 등" style="resize:vertical;font-family:inherit;"></textarea>
+    </div>
+
+    <div class="approval-modal-footer">
+      <button class="approval-cancel-btn" onclick="closeApprovalModal()">취소</button>
+      <button class="approval-submit-btn" id="approvalSubmitBtn" onclick="submitApproval()">
+        <span>✓</span> PT 등록 승인
+      </button>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>

@@ -12,7 +12,8 @@ let dashStats        = {};
 let currentTrainerId = '';
 let currentUserId    = '';
 let currentRole      = '';
-let myPTRequests     = [];
+let myPTRequests          = [];
+let pendingApprovalRequest = null;
 
 // 회원 상세 모달 상태
 let detailMemberId   = null;
@@ -147,7 +148,7 @@ function renderPTRequests() {
         신청일시: ${escHtml(r.신청일시)}
       </div>
       <div class="pt-request-actions">
-        <button class="btn-approve" onclick="respondPTRequest('${escHtml(r.신청ID)}','승인',this)">승인</button>
+        <button class="btn-approve" onclick="openApprovalModal('${escHtml(r.신청ID)}')">승인</button>
         <button class="btn-reject" onclick="respondPTRequest('${escHtml(r.신청ID)}','거절',this)">거절</button>
       </div>
     </div>`).join('');
@@ -167,6 +168,109 @@ async function respondPTRequest(requestId, status, btn) {
     item.style.opacity = '1';
     btn.parentElement.querySelectorAll('button').forEach(b => b.disabled = false);
     showToast('처리 중 오류가 발생했습니다.', 'danger');
+  }
+}
+
+// ── PT 승인 모달 ─────────────────────────────────────────────
+function openApprovalModal(requestId) {
+  pendingApprovalRequest = myPTRequests.find(r => r.신청ID === requestId);
+  if (!pendingApprovalRequest) return;
+
+  document.getElementById('approvalMemberName').textContent  = pendingApprovalRequest.회원명  || '—';
+  document.getElementById('approvalTrainerName').textContent = pendingApprovalRequest.트레이너명 || '—';
+
+  // 폼 초기화
+  document.getElementById('approvalSessions').value    = '';
+  document.getElementById('approvalTime').value        = '';
+  document.getElementById('approvalStartDate').value   = TODAY_STR;
+  document.getElementById('approvalAmount').value      = '';
+  document.getElementById('approvalMemo').value        = '';
+  document.querySelectorAll('input[name="approvalDay"]').forEach(cb => cb.checked = false);
+  document.querySelectorAll('.session-preset-btn').forEach(b => b.classList.remove('active'));
+
+  document.getElementById('trainerApprovalBackdrop').style.display = 'flex';
+}
+
+function closeApprovalModal() {
+  document.getElementById('trainerApprovalBackdrop').style.display = 'none';
+  pendingApprovalRequest = null;
+}
+
+function handleApprovalBackdrop(e) {
+  if (e.target === document.getElementById('trainerApprovalBackdrop')) closeApprovalModal();
+}
+
+function setApprovalSessions(btn, count) {
+  document.getElementById('approvalSessions').value = count;
+  document.querySelectorAll('.session-preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function clearSessionPreset() {
+  document.querySelectorAll('.session-preset-btn').forEach(b => b.classList.remove('active'));
+}
+
+async function submitApproval() {
+  if (!pendingApprovalRequest) return;
+
+  const sessions = parseInt(document.getElementById('approvalSessions').value, 10);
+  const days     = [...document.querySelectorAll('input[name="approvalDay"]:checked')].map(cb => cb.value);
+  const time     = document.getElementById('approvalTime').value;
+  const startDate= document.getElementById('approvalStartDate').value;
+  const amount   = document.getElementById('approvalAmount').value;
+  const memo     = document.getElementById('approvalMemo').value.trim();
+
+  if (!sessions || sessions < 1) { alert('총 세션 수를 입력해 주세요.'); return; }
+  if (days.length === 0)          { alert('PT 요일을 하나 이상 선택해 주세요.'); return; }
+  if (!time)                      { alert('PT 시간을 선택해 주세요.'); return; }
+  if (!startDate)                 { alert('시작일을 입력해 주세요.'); return; }
+
+  const submitBtn = document.getElementById('approvalSubmitBtn');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 처리 중...';
+
+  try {
+    const res = await callPost('approvePTRequest', {
+      신청ID:  pendingApprovalRequest.신청ID,
+      트레이너ID: pendingApprovalRequest.트레이너ID,
+      트레이너명: pendingApprovalRequest.트레이너명,
+      회원명:  pendingApprovalRequest.회원명,
+      세션수:  sessions,
+      요일:    days.join(','),
+      시간:    time,
+      시작일:  startDate,
+      금액:    amount || '0',
+      메모:    memo,
+    });
+
+    if (res && res.success === false) {
+      alert(res.message || '승인 처리에 실패했습니다.');
+      return;
+    }
+
+    const approvedId = pendingApprovalRequest.신청ID;
+    myPTRequests = myPTRequests.filter(r => r.신청ID !== approvedId);
+    closeApprovalModal();
+    showToast(`${pendingApprovalRequest ? '' : ''}PT 계약이 등록되었습니다.`);
+    renderPTRequests();
+
+    // 대시보드 데이터 새로고침
+    try {
+      const data = await callGet('getTrainerDashboard', { trainerId: currentTrainerId });
+      dashMembers    = data.members       || [];
+      weeklySchedule = data.weeklySchedule || {};
+      dashStats      = data.stats         || {};
+      renderStatCards();
+      renderTodaySessions();
+      renderWeeklyGrid();
+      renderMemberTable();
+    } catch(e) { /* 새로고침 실패는 무시 */ }
+
+  } catch(e) {
+    alert('PT 등록 중 오류가 발생했습니다.');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<span>✓</span> PT 등록 승인';
   }
 }
 

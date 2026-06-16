@@ -724,6 +724,13 @@ function handleMockPost(action, body) {
       return { success: true };
     }
 
+    case 'approvePTRequest': {
+      const req = MOCK_PT_REQUESTS.find(r => r.신청ID === body.신청ID);
+      if (req) req.상태 = '승인';
+      console.log('[MOCK] PT 계약 등록:', body);
+      return { success: true };
+    }
+
     default:
       return { success: true };
   }

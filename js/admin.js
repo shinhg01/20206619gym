@@ -10,6 +10,7 @@ let allPayments    = [];
 let allEquipment   = [];
 let allTrainers    = [];
 let allPTRequests  = [];
+let pendingApprovalRequest = null;
 let equipFilter    = '전체';
 
 // 기본값 — getTrainers 로드 후 덮어씀
@@ -171,11 +172,104 @@ function renderPTRequests() {
             회원: ${escHtml(r.회원명)}
           </div>
           <div class="pt-request-actions">
-            <button class="btn-approve" onclick="respondPTRequest('${escHtml(r.신청ID)}','승인',this)">승인</button>
+            <button class="btn-approve" onclick="openApprovalModal('${escHtml(r.신청ID)}')">승인</button>
             <button class="btn-reject" onclick="respondPTRequest('${escHtml(r.신청ID)}','거절',this)">거절</button>
           </div>
         </div>`).join('')}
     </div>`;
+}
+
+// ── PT 계약 등록 모달 ─────────────────────────────────────────
+function openApprovalModal(requestId) {
+  pendingApprovalRequest = allPTRequests.find(r => r.신청ID === requestId);
+  if (!pendingApprovalRequest) return;
+
+  document.getElementById('approvalMemberName').textContent  = pendingApprovalRequest.회원명;
+  document.getElementById('approvalTrainerName').textContent = pendingApprovalRequest.트레이너명;
+  document.getElementById('approvalStartDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('approvalSessions').value  = '';
+  document.getElementById('approvalTime').value      = '';
+  document.getElementById('approvalAmount').value    = '';
+  document.getElementById('approvalMemo').value      = '';
+  document.querySelectorAll('input[name="approvalDay"]').forEach(cb => cb.checked = false);
+  document.querySelectorAll('.session-preset-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('approvalSubmitBtn').disabled = false;
+  document.getElementById('approvalSubmitBtn').innerHTML = '<i class="fa-solid fa-check"></i> 계약 등록';
+
+  document.getElementById('approvalBackdrop').style.display = 'flex';
+}
+
+function closeApprovalModal() {
+  document.getElementById('approvalBackdrop').style.display = 'none';
+  pendingApprovalRequest = null;
+}
+
+function handleApprovalBackdrop(e) {
+  if (e.target === document.getElementById('approvalBackdrop')) closeApprovalModal();
+}
+
+function setApprovalSessions(btn, count) {
+  document.getElementById('approvalSessions').value = count;
+  document.querySelectorAll('.session-preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function clearSessionPreset() {
+  document.querySelectorAll('.session-preset-btn').forEach(b => b.classList.remove('active'));
+}
+
+async function submitApproval() {
+  const r = pendingApprovalRequest;
+  if (!r) return;
+
+  const sessions = parseInt(document.getElementById('approvalSessions').value);
+  if (!sessions || sessions < 1) { alert('총 세션 수를 입력해 주세요.'); return; }
+
+  const days = [...document.querySelectorAll('input[name="approvalDay"]:checked')].map(cb => cb.value);
+  if (days.length === 0) { alert('선호 요일을 1개 이상 선택해 주세요.'); return; }
+
+  const time = document.getElementById('approvalTime').value;
+  if (!time) { alert('수업 시간대를 선택해 주세요.'); return; }
+
+  const startDate = document.getElementById('approvalStartDate').value;
+  if (!startDate) { alert('계약 시작일을 입력해 주세요.'); return; }
+
+  const amount = parseInt(document.getElementById('approvalAmount').value) || 0;
+  const memo   = document.getElementById('approvalMemo').value.trim();
+
+  const submitBtn = document.getElementById('approvalSubmitBtn');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 등록 중...';
+
+  try {
+    const res = await callPost('approvePTRequest', {
+      신청ID:   r.신청ID,
+      트레이너ID: r.트레이너ID,
+      트레이너명: r.트레이너명,
+      회원명:   r.회원명,
+      세션수:   sessions,
+      요일:     days.join(','),
+      시간:     time,
+      시작일:   startDate,
+      금액:     amount,
+      메모:     memo,
+    });
+
+    if (res && res.success === false) {
+      alert(res.message || '계약 등록에 실패했습니다.');
+      return;
+    }
+
+    allPTRequests = allPTRequests.filter(x => x.신청ID !== r.신청ID);
+    closeApprovalModal();
+    showToast(`${r.회원명} 회원 PT 계약이 등록되었습니다.`);
+    renderPTRequests();
+  } catch (e) {
+    alert('처리 중 오류가 발생했습니다.');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> 계약 등록';
+  }
 }
 
 async function respondPTRequest(requestId, status, btn) {

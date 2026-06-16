@@ -7,7 +7,7 @@
 const CONFIG = {
   // TODO: 여기에 Google Apps Script 배포 URL을 입력하세요.
   // 예: 'https://script.google.com/macros/s/AKfycb.../exec'
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzGpeuXIA8TPMOsm2dZ4KYCxztCh2KvX7K6GedtrMFvu5_K30dzMfuYy774NvUtVTPg5g/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzEmlJVwSIU4ylJMTBdHupmPfvLKPS4HTB0iFTsjjbBCyuoZGEJTw0hDmfuIlm86fugBA/exec',
   
   // 세션 스토리지용 키 정의
   SESSION_KEYS: {
