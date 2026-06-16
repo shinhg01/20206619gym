@@ -8,10 +8,11 @@
 let trainers        = [];   // 전체 트레이너 목록
 let myPTContracts   = [];   // 내 PT 계약 목록
 let nextSchedule    = null; // 다음 PT 예약 정보
-let selectedTrainer = null; // PT 신청 폼에서 선택된 트레이너 객체
-let selectedSessions= 0;    // 선택된 세션 수
-let currentRole     = '';
-let currentUserId   = '';
+let selectedTrainer         = null; // PT 신청 폼에서 선택된 트레이너 객체
+let selectedSessions        = 0;    // 선택된 세션 수
+let selectedTrainerSchedule = null; // 선택된 트레이너의 시간표
+let currentRole             = '';
+let currentUserId           = '';
 
 // 시간표 모달 상태
 let scheduleData      = null; // 현재 모달에 표시 중인 시간표 데이터
@@ -432,12 +433,13 @@ function proceedToApply() {
 }
 
 // ── 트레이너 선택 (PT 신청 폼 열기) ─────────────────────────
-function selectTrainer(id) {
+async function selectTrainer(id) {
   const t = trainers.find(x => x.id === id);
   if (!t || !isTrainerActive(t)) return;
 
-  selectedTrainer  = t;
-  selectedSessions = 0;
+  selectedTrainer         = t;
+  selectedSessions        = 0;
+  selectedTrainerSchedule = null;
 
   renderTrainerGrid();
 
@@ -455,14 +457,67 @@ function selectTrainer(id) {
   document.getElementById('paymentAmount').textContent = '-';
   document.getElementById('paymentCalc').textContent   = '세션 수를 선택해 주세요';
 
+  // 요일 체크박스에 변경 이벤트 등록 (중복 방지: onchange 사용)
+  document.querySelectorAll('input[name="pDay"]').forEach(cb => {
+    cb.onchange = updateTimeOptions;
+  });
+
+  // 트레이너 시간표 로드 후 시간 드롭다운 갱신
+  try {
+    selectedTrainerSchedule = await callGet('getTrainerSchedule', { trainerId: id });
+    updateTimeOptions();
+  } catch(e) {
+    console.warn('[PT] 시간표 로드 실패:', e);
+  }
+
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+/**
+ * 선택된 요일 기준으로 시간 드롭다운의 예약됨/휴무 항목을 비활성화
+ */
+function updateTimeOptions() {
+  const selectedDays = [...document.querySelectorAll('input[name="pDay"]:checked')].map(cb => cb.value);
+  const timeSelect   = document.getElementById('pTime');
+  const slots        = selectedTrainerSchedule?.slots;
+
+  Array.from(timeSelect.options).forEach(opt => {
+    if (!opt.value) return; // placeholder
+
+    // 원본 라벨 복원
+    opt.textContent = opt.textContent.replace(/\s*\(예약됨\)|\s*\(휴무\)/g, '');
+    opt.disabled    = false;
+
+    if (!slots || selectedDays.length === 0) return;
+
+    // 선택된 요일 중 하나라도 'booked'이면 차단
+    const isBooked = selectedDays.some(day => slots[day] && slots[day][opt.value] === 'booked');
+    // 선택된 요일 전체가 'off'(휴무)이면 차단
+    const isAllOff = selectedDays.every(day => slots[day] && slots[day][opt.value] === 'off');
+
+    if (isBooked) {
+      opt.disabled    = true;
+      opt.textContent += ' (예약됨)';
+    } else if (isAllOff) {
+      opt.disabled    = true;
+      opt.textContent += ' (휴무)';
+    }
+  });
+
+  // 현재 선택된 시간이 비활성화됐으면 초기화
+  if (timeSelect.value && timeSelect.options[timeSelect.selectedIndex]?.disabled) {
+    timeSelect.value = '';
+  }
+}
+
 function cancelTrainerSelect() {
-  selectedTrainer  = null;
-  selectedSessions = 0;
-  preSelectedDay   = '';
-  preSelectedTime  = '';
+  selectedTrainer         = null;
+  selectedSessions        = 0;
+  selectedTrainerSchedule = null;
+  preSelectedDay          = '';
+  preSelectedTime         = '';
+  // 요일 이벤트 해제
+  document.querySelectorAll('input[name="pDay"]').forEach(cb => { cb.onchange = null; });
   document.getElementById('applyPanelWrap').style.display = 'none';
   document.getElementById('ptForm').reset();
   renderTrainerGrid();
@@ -505,6 +560,16 @@ async function handleApplySubmit(e) {
 
   const time = document.getElementById('pTime').value;
   if (!time) { alert('선호 시간대를 선택해 주세요.'); return; }
+
+  // 선택한 요일·시간이 이미 예약된 슬롯인지 재확인
+  if (selectedTrainerSchedule?.slots) {
+    const slots      = selectedTrainerSchedule.slots;
+    const blockedDay = days.find(day => slots[day] && slots[day][time] === 'booked');
+    if (blockedDay) {
+      alert(`${blockedDay}요일 ${time}은(는) 이미 다른 회원이 예약한 시간입니다.\n다른 시간을 선택해 주세요.`);
+      return;
+    }
+  }
 
   const memo  = document.getElementById('pMemo').value.trim();
   const rate  = Number(document.getElementById('selectedTrainerRate').value) || 0;

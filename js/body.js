@@ -386,6 +386,10 @@ function renderTable() {
   const wrap = document.getElementById('bodyTableWrap');
   document.getElementById('totalCountBadge').textContent = `${allBodyData.length}건`;
 
+  // 데이터가 있으면 PDF 버튼 표시
+  const dlBtn = document.getElementById('downloadReportBtn');
+  if (dlBtn) dlBtn.style.display = allBodyData.length > 0 ? '' : 'none';
+
   if (allBodyData.length === 0) {
     wrap.innerHTML = `<div class="empty-state"><i class="fa-solid fa-clipboard-list"></i><p>아직 측정 기록이 없습니다.</p></div>`;
     return;
@@ -582,6 +586,11 @@ function escHtml(str) {
 function formatDateShort(dateStr) {
   if (!dateStr || dateStr.length < 10) return dateStr;
   return dateStr.substring(5); // 'MM-DD'
+}
+
+// ── PDF 보고서 다운로드 ──────────────────────────────────────
+function downloadBodyReport() {
+  generateBodyReport(targetUserName || '회원', allBodyData);
 }
 
 function showToast(msg, type = 'success') {

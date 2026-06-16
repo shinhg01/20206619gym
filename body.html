@@ -426,7 +426,12 @@
               <i class="fa-solid fa-table-list" style="color:var(--color-primary);"></i>
               전체 측정 기록
             </h3>
-            <span class="badge badge-primary" id="totalCountBadge">0건</span>
+            <div style="display:flex; align-items:center; gap:0.6rem;">
+              <span class="badge badge-primary" id="totalCountBadge">0건</span>
+              <button class="btn btn-outline btn-sm" onclick="downloadBodyReport()" id="downloadReportBtn" style="display:none;">
+                <i class="fa-solid fa-file-pdf"></i> PDF 보고서
+              </button>
+            </div>
           </div>
           <div class="card-body" style="padding:0;">
             <div id="bodyTableWrap">
@@ -462,6 +467,7 @@
 
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
+<script src="js/report.js"></script>
 <script src="js/body.js"></script>
 </body>
 </html>

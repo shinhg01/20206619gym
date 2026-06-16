@@ -663,6 +663,13 @@ function renderBodyTab(bodyData) {
   }
 
   content.innerHTML = `
+    <div style="display:flex; justify-content:flex-end; margin-bottom:0.75rem;">
+      <button class="btn btn-outline btn-sm"
+              onclick="downloadMemberBodyReport('${escHtml(detailMemberName)}')"
+              style="font-size:0.8rem; display:flex; align-items:center; gap:0.35rem;">
+        <i class="fa-solid fa-file-pdf" style="color:var(--color-danger);"></i> PDF 보고서
+      </button>
+    </div>
     <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:0.75rem; margin-bottom:1.25rem;">
       ${[
         { label:'체중', val: last.weight, unit:'kg', d: wDiff, field:'weight' },
@@ -797,6 +804,13 @@ function escHtml(str) {
   return String(str || '')
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── PT 회원 신체 기록 PDF 다운로드 ──────────────────────────
+function downloadMemberBodyReport(memberName) {
+  const trainerName = sessionStorage.getItem(CONFIG.SESSION_KEYS.USER_NAME) || '';
+  const bodyData    = detailCache[detailMemberId]?.body || [];
+  generateBodyReport(memberName, bodyData, trainerName);
 }
 
 function showToast(msg, type = 'success') {
