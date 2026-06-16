@@ -178,14 +178,27 @@ function openApprovalModal(requestId) {
   document.getElementById('approvalMemberName').textContent  = pendingApprovalRequest.회원명  || '—';
   document.getElementById('approvalTrainerName').textContent = pendingApprovalRequest.트레이너명 || '—';
 
-  // 폼 초기화
-  document.getElementById('approvalSessions').value    = '';
-  document.getElementById('approvalTime').value        = '';
-  document.getElementById('approvalStartDate').value   = TODAY_STR;
-  document.getElementById('approvalAmount').value      = '';
-  document.getElementById('approvalMemo').value        = '';
-  document.querySelectorAll('input[name="approvalDay"]').forEach(cb => cb.checked = false);
-  document.querySelectorAll('.session-preset-btn').forEach(b => b.classList.remove('active'));
+  // 폼 초기화 후 회원 선호 정보 자동 채우기
+  const prefSessions = pendingApprovalRequest.선호세션수 || 0;
+  const prefDays     = String(pendingApprovalRequest.선호요일 || '').split(',').map(d => d.trim()).filter(Boolean);
+  const prefTime     = pendingApprovalRequest.선호시간 || '';
+
+  document.getElementById('approvalSessions').value  = prefSessions || '';
+  document.getElementById('approvalTime').value      = prefTime;
+  document.getElementById('approvalStartDate').value = TODAY_STR;
+  document.getElementById('approvalAmount').value    = '';
+  document.getElementById('approvalMemo').value      = '';
+
+  // 선호 요일 체크박스 자동 선택
+  document.querySelectorAll('input[name="approvalDay"]').forEach(cb => {
+    cb.checked = prefDays.includes(cb.value);
+  });
+
+  // 세션 프리셋 버튼 활성화 (텍스트에서 숫자만 추출: "10회" → 10)
+  document.querySelectorAll('.session-preset-btn').forEach(b => {
+    const btnCount = parseInt(b.textContent, 10);
+    b.classList.toggle('active', prefSessions > 0 && btnCount === prefSessions);
+  });
 
   document.getElementById('trainerApprovalBackdrop').style.display = 'flex';
 }
