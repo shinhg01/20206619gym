@@ -408,7 +408,7 @@ function selectScheduleSlot(el, day, time) {
 }
 
 // ── 모달에서 PT 신청 진행 ────────────────────────────────────
-function proceedToApply() {
+async function proceedToApply() {
   const trainerNameEl = document.getElementById('sModalName');
   const trainerName = trainerNameEl.textContent.replace(' 트레이너', '');
   const t = trainers.find(x => x.name === trainerName);
@@ -419,16 +419,23 @@ function proceedToApply() {
   const savedTime = preSelectedTime;
 
   closeScheduleModal();
-  selectTrainer(t.id);
 
-  // 모달에서 선택한 요일/시간 자동 입력
+  // selectTrainer를 await: 스케줄 로드 완료 후에 요일/시간 설정
+  await selectTrainer(t.id);
+
+  // 모달에서 선택한 요일 체크 후 updateTimeOptions 명시 호출
+  // (checkbox.checked = true는 onchange를 발생시키지 않으므로 직접 호출)
   if (savedDay) {
-    setTimeout(() => {
-      const dayCheckbox = document.querySelector(`input[name="pDay"][value="${savedDay}"]`);
-      if (dayCheckbox) dayCheckbox.checked = true;
-      const timeSelect = document.getElementById('pTime');
-      if (timeSelect && savedTime) timeSelect.value = savedTime;
-    }, 50);
+    const dayCheckbox = document.querySelector(`input[name="pDay"][value="${savedDay}"]`);
+    if (dayCheckbox) dayCheckbox.checked = true;
+    updateTimeOptions(); // 스케줄 로드 완료 + 요일 체크 후 갱신
+
+    // 선택한 시간이 여전히 활성 상태일 때만 설정
+    const timeSelect = document.getElementById('pTime');
+    if (timeSelect && savedTime) {
+      const opt = Array.from(timeSelect.options).find(o => o.value === savedTime);
+      if (opt && !opt.disabled) timeSelect.value = savedTime;
+    }
   }
 }
 
@@ -480,31 +487,42 @@ function updateTimeOptions() {
   const selectedDays = [...document.querySelectorAll('input[name="pDay"]:checked')].map(cb => cb.value);
   const timeSelect   = document.getElementById('pTime');
   const slots        = selectedTrainerSchedule?.slots;
+  const workDays     = selectedTrainerSchedule?.workDays || ['월','화','수','목','금'];
 
   Array.from(timeSelect.options).forEach(opt => {
-    if (!opt.value) return; // placeholder
+    if (!opt.value) return;
 
-    // 원본 라벨 복원
     opt.textContent = opt.textContent.replace(/\s*\(예약됨\)|\s*\(휴무\)/g, '');
     opt.disabled    = false;
 
     if (!slots || selectedDays.length === 0) return;
 
-    // 선택된 요일 중 하나라도 'booked'이면 차단
-    const isBooked = selectedDays.some(day => slots[day] && slots[day][opt.value] === 'booked');
-    // 선택된 요일 전체가 'off'(휴무)이면 차단
-    const isAllOff = selectedDays.every(day => slots[day] && slots[day][opt.value] === 'off');
+    let hasBooked    = false;
+    let allUnavailable = true; // 선택 요일 전체가 사용 불가이면 true
 
-    if (isBooked) {
+    selectedDays.forEach(day => {
+      const status    = slots[day] ? slots[day][opt.value] : undefined;
+      const isWorkDay = workDays.includes(day);
+
+      if (status === 'booked') {
+        hasBooked = true;
+      }
+
+      // 해당 요일에 이 시간이 '예약 가능'한 경우:
+      // - 근무일이고 status가 'available'이거나 workHours에 없는 시간(undefined)인 경우
+      const isAvailable = isWorkDay && (status === 'available' || status === undefined);
+      if (isAvailable) allUnavailable = false;
+    });
+
+    if (hasBooked) {
       opt.disabled    = true;
       opt.textContent += ' (예약됨)';
-    } else if (isAllOff) {
+    } else if (allUnavailable) {
       opt.disabled    = true;
       opt.textContent += ' (휴무)';
     }
   });
 
-  // 현재 선택된 시간이 비활성화됐으면 초기화
   if (timeSelect.value && timeSelect.options[timeSelect.selectedIndex]?.disabled) {
     timeSelect.value = '';
   }
