@@ -15,6 +15,9 @@ let currentRole      = '';
 let myPTRequests          = [];
 let pendingApprovalRequest = null;
 
+// 오늘 출석 체크 완료된 ptId 목록 (세션 내 유지)
+const completedToday = new Set();
+
 // 회원 상세 모달 상태
 let detailMemberId   = null;
 let detailMemberName = '';
@@ -324,7 +327,7 @@ function renderTodaySessions() {
   wrap.innerHTML = todaySessions.map(s => {
     const member = dashMembers.find(m => m.memberId === s.memberId);
     const pal    = AVATAR_PALETTE[dashMembers.indexOf(member) % AVATAR_PALETTE.length];
-    const isDone = false; // 실제 구현 시 출석 완료 여부 체크
+    const isDone = completedToday.has(s.ptId);
     return `
       <div class="today-session-card ${isDone ? 'done' : ''}" id="today-card-${escHtml(s.ptId)}">
         <div class="session-avatar" style="${isDone ? '' : `background:${pal.color};`}">${(s.memberName || '?')[0]}</div>
@@ -347,6 +350,8 @@ async function markAttendance(ptId, memberName, btn) {
 
   try {
     await callPost('markAttendance', { ptId, date: TODAY_STR });
+
+    completedToday.add(ptId); // 완료 상태 세션 내 유지
 
     // 로컬 상태 즉시 업데이트
     const m = dashMembers.find(x => x.ptId === ptId);
@@ -419,12 +424,25 @@ function renderWeeklyGrid() {
       } else {
         html += `<td class="wg-cell ${isToday ? 'today-col' : ''}">`;
         sessions.forEach(s => {
-          html += `<div class="wg-session ${isToday ? 'today-session' : ''}"
-                        onclick="openMemberModal('${escHtml(s.memberId)}','${escHtml(s.memberName)}')"
-                        title="${escHtml(s.memberName)} · ${escHtml(s.time)} 클릭하여 상세 보기">
-                     <span class="s-name">${escHtml(s.memberName)}</span>
-                     <span class="s-time">${escHtml(s.time)}</span>
-                   </div>`;
+          const done = completedToday.has(s.ptId);
+          if (isToday) {
+            html += `<div class="wg-session today-session ${done ? 'wg-done' : ''}" style="cursor:default;">
+                       <span class="s-name" style="cursor:pointer;" onclick="openMemberModal('${escHtml(s.memberId)}','${escHtml(s.memberName)}')">${escHtml(s.memberName)}</span>
+                       <span class="s-time">${escHtml(s.time)}</span>
+                       ${done
+                         ? `<span class="wg-check-done"><i class="fa-solid fa-check"></i> 완료</span>`
+                         : `<button class="wg-check-btn" onclick="markAttendance('${escHtml(s.ptId)}','${escHtml(s.memberName)}',this)">
+                              <i class="fa-solid fa-check"></i>
+                            </button>`}
+                     </div>`;
+          } else {
+            html += `<div class="wg-session"
+                          onclick="openMemberModal('${escHtml(s.memberId)}','${escHtml(s.memberName)}')"
+                          title="${escHtml(s.memberName)} · ${escHtml(s.time)} 클릭하여 상세 보기">
+                       <span class="s-name">${escHtml(s.memberName)}</span>
+                       <span class="s-time">${escHtml(s.time)}</span>
+                     </div>`;
+          }
         });
         html += `</td>`;
       }

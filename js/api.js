@@ -493,8 +493,8 @@ function handleMockGet(action, params) {
       ];
 
     case 'getTrainerDashboard': {
-      const tId = params.trainerId || 'trainer';
-      const isKimCoach = (tId === 'trainer' || tId === 'T001');
+      const tId = params.trainerId || 'T001';
+      const isKimCoach = (tId === 'T001');
       if (!isKimCoach) return { members: [], stats: {}, weeklySchedule: {} };
 
       const members = [
@@ -608,7 +608,7 @@ function handleMockPost(action, body) {
         return { success: true, userId: 'admin', name: '최고관리자', role: '관리자', assignedTrainer: '', status: '활동중' };
       }
       if (id === 'trainer' && pw === '1234') {
-        return { success: true, userId: 'trainer', name: '김코치', role: '트레이너', assignedTrainer: '', status: '활동중' };
+        return { success: true, userId: 'T001', name: '김코치', role: '트레이너', assignedTrainer: '', status: '활동중' };
       }
       if (id === 'user' && pw === '1234') {
         return { success: true, userId: 'user', name: '홍길동', role: 'PT회원', assignedTrainer: '김코치', status: '활동중' };
