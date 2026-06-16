@@ -187,7 +187,7 @@ function login({ memberId, password }) {
           userId: id,
           name: name,
           role: grade,
-          assignedTrainer: trainer,
+          assignedTrainer: grade === '일반회원' ? '' : trainer,
           status: status || '활동중'
         };
       }

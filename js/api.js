@@ -612,7 +612,10 @@ function handleMockPost(action, body) {
       if (id === 'user' && pw === '1234') {
         return { success: true, userId: 'user', name: '홍길동', role: 'PT회원', assignedTrainer: '김코치', status: '활동중' };
       }
-      return { success: false, message: '아이디 또는 비밀번호 오류 (테스트 아이디: admin/admin, user/1234, trainer/1234)' };
+      if (id === 'member' && pw === '1234') {
+        return { success: true, userId: 'member', name: '이일반', role: '일반회원', assignedTrainer: '', status: '활동중' };
+      }
+      return { success: false, message: '아이디 또는 비밀번호 오류 (테스트 아이디: admin/admin, user/1234, trainer/1234, member/1234)' };
     }
 
     case 'saveWorkout': {
