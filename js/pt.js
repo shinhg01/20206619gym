@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const [trainerData, ptData] = await Promise.all([
       callGet('getTrainers', {}),
-      callGet('getPT', { userId }),
+      callGet('getPT', { userId, role }),
     ]);
     trainers      = Array.isArray(trainerData) ? trainerData : [];
     myPTContracts = ptData?.contracts || [];
@@ -128,7 +128,18 @@ function renderPTStatus() {
     return;
   }
 
-  // 진행중인 PT 계약 추출
+  // 일반회원은 PT 미신청 상태 — 담당 트레이너 없음 배너
+  if (currentRole === '일반회원') {
+    section.innerHTML = `
+      <div class="no-pt-banner">
+        <i class="fa-solid fa-dumbbell"></i>
+        <div style="font-weight:700; font-size:1rem; margin-bottom:0.3rem;">담당 PT 트레이너가 없습니다</div>
+        <div style="font-size:0.85rem;">아래 트레이너 목록에서 나에게 맞는 트레이너를 선택하여 PT를 신청해 보세요!</div>
+      </div>`;
+    return;
+  }
+
+  // 진행중인 PT 계약 추출 (PT회원만)
   const active = myPTContracts.filter(c => c.status === '진행중');
 
   if (active.length === 0) {
@@ -619,7 +630,7 @@ async function handleApplySubmit(e) {
     showToast(`${selectedTrainer.name} 트레이너에게 PT 신청이 완료되었습니다!`);
     cancelTrainerSelect();
     // PT 현황 재로드
-    const ptData = await callGet('getPT', { userId: currentUserId });
+    const ptData = await callGet('getPT', { userId: currentUserId, role: currentRole });
     myPTContracts = ptData?.contracts || [];
     nextSchedule  = ptData?.nextSchedule || null;
     renderPTStatus();

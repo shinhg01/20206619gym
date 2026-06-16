@@ -247,6 +247,7 @@ function handleMockGet(action, params) {
 
     case 'getPT': {
       const uid = params.userId || 'user';
+      if (params.role === '일반회원') return { contracts: [], nextSchedule: null };
       // user 계정은 시드 PT 계약 반환
       if (uid === 'user') {
         return {

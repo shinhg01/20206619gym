@@ -51,7 +51,7 @@ function doGet(e) {
       case 'getTrainers':
         return respond(getTrainers());
       case 'getPT':
-        return respond(getPT(userId));
+        return respond(getPT(userId, role));
       case 'getPTSchedule':
         return respond(getPTSchedule(userId, role));
       case 'getEquipment':
@@ -591,8 +591,9 @@ function deleteDiet(body) {
 
 // ── PT 조회 및 계약 신청 ──────────────────────────────────────
 
-function getPT(userId) {
+function getPT(userId, role) {
   if (!userId) return { contracts: [], nextSchedule: null };
+  if (role === '일반회원') return { contracts: [], nextSchedule: null };
   const ss      = SpreadsheetApp.openById(SHEET_ID);
   const ptSheet = ss.getSheetByName(SHEET_NAMES.pt);
   if (!ptSheet) return { contracts: [], nextSchedule: null };
