@@ -143,17 +143,39 @@ function renderPTRequests() {
   badgeEl.textContent = myPTRequests.length;
   badgeEl.style.display = '';
 
-  listEl.innerHTML = myPTRequests.map(r => `
+  listEl.innerHTML = myPTRequests.map(r => {
+    const allDays = ['월','화','수','목','금','토','일'];
+    const prefDays = r.선호요일 ? String(r.선호요일).split(',').map(d => d.trim()) : [];
+    const dayChips = allDays.map(d =>
+      `<span class="req-day-chip ${prefDays.includes(d) ? 'active' : ''}">${d}</span>`
+    ).join('');
+
+    return `
     <div class="pt-request-item" data-id="${escHtml(r.신청ID)}">
-      <div class="pt-req-name">${escHtml(r.회원명)} 회원</div>
-      <div class="pt-req-meta">
-        신청일시: ${escHtml(r.신청일시)}${r.선호요일 ? `<br>선호 요일: ${escHtml(r.선호요일)}` : ''}${r.선호시간 ? ` · ${escHtml(r.선호시간)}` : ''}${r.선호세션수 ? ` · ${escHtml(String(r.선호세션수))}회` : ''}
+      <div class="pt-req-header">
+        <div class="pt-req-name"><i class="fa-solid fa-user"></i> ${escHtml(r.회원명)} 회원</div>
+        <div class="pt-req-date">${escHtml(r.신청일시)}</div>
+      </div>
+      <div class="pt-req-schedule">
+        <div class="pt-req-schedule-row">
+          <span class="pt-req-label"><i class="fa-regular fa-calendar-days"></i> 선호 요일</span>
+          <div class="pt-req-day-chips">${dayChips}</div>
+        </div>
+        <div class="pt-req-schedule-row">
+          <span class="pt-req-label"><i class="fa-regular fa-clock"></i> 선호 시간</span>
+          <span class="pt-req-value">${r.선호시간 ? escHtml(r.선호시간) : '미지정'}</span>
+        </div>
+        <div class="pt-req-schedule-row">
+          <span class="pt-req-label"><i class="fa-solid fa-layer-group"></i> 희망 세션</span>
+          <span class="pt-req-value">${r.선호세션수 ? `<strong>${escHtml(String(r.선호세션수))}회</strong>` : '미지정'}</span>
+        </div>
       </div>
       <div class="pt-request-actions">
-        <button class="btn-approve" onclick="openApprovalModal('${escHtml(r.신청ID)}')">승인</button>
-        <button class="btn-reject" onclick="respondPTRequest('${escHtml(r.신청ID)}','거절',this)">거절</button>
+        <button class="btn-approve" onclick="openApprovalModal('${escHtml(r.신청ID)}')"><i class="fa-solid fa-check"></i> 승인</button>
+        <button class="btn-reject" onclick="respondPTRequest('${escHtml(r.신청ID)}','거절',this)"><i class="fa-solid fa-xmark"></i> 거절</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function respondPTRequest(requestId, status, btn) {

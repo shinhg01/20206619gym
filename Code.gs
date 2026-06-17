@@ -127,6 +127,8 @@ function doPost(e) {
         return respond(assignTrainer(body));
       case 'removePTMember':
         return respond(removePTMember(body));
+      case 'addPayment':
+        return respond(addPayment(body));
       case 'updatePTRequest':
         return respond(updatePTRequest(body));
       case 'approvePTRequest':           // ← 추가
@@ -422,7 +424,14 @@ function getPayments(userId, role) {
   const ss    = SpreadsheetApp.openById(SHEET_ID);
   const sheet = ss.getSheetByName(SHEET_NAMES.payments);
   if (!sheet) return [];
-  return sheet.getDataRange().getValues();
+  const rows = sheet.getDataRange().getValues();
+  return rows.map(r =>
+    r.map(cell =>
+      cell instanceof Date
+        ? Utilities.formatDate(cell, 'GMT+9', 'yyyy-MM-dd')
+        : cell
+    )
+  );
 }
 
 // ── 운동 기록 CRUD ──────────────────────────────────────────
@@ -593,16 +602,34 @@ function deleteDiet(body) {
 
 function getPT(userId, role) {
   if (!userId) return { contracts: [], nextSchedule: null };
-  if (role === '일반회원') return { contracts: [], nextSchedule: null };
   const ss      = SpreadsheetApp.openById(SHEET_ID);
   const ptSheet = ss.getSheetByName(SHEET_NAMES.pt);
   if (!ptSheet) return { contracts: [], nextSchedule: null };
 
+  // userId로 회원명 조회 (memberId가 비어있는 구 데이터 폴백용)
+  let memberName = '';
+  try {
+    const memSheet = ss.getSheetByName(SHEET_NAMES.members);
+    if (memSheet) {
+      const memRows = memSheet.getDataRange().getValues();
+      for (let i = 1; i < memRows.length; i++) {
+        if (String(memRows[i][0]).trim() === String(userId).trim()) {
+          memberName = String(memRows[i][1]).trim();
+          break;
+        }
+      }
+    }
+  } catch(e) {}
+
   const rows      = ptSheet.getDataRange().getValues();
   const contracts = [];
   for (let i = 1; i < rows.length; i++) {
-    const r = rows[i];
-    if (String(r[3]).trim() !== String(userId).trim()) continue;
+    const r        = rows[i];
+    const rMemberId   = String(r[3]).trim();
+    const rMemberName = String(r[4]).trim();
+    const matches = rMemberId === String(userId).trim()
+                 || (rMemberId === '' && memberName && rMemberName === memberName);
+    if (!matches) continue;
     contracts.push({
       ptId: r[0], trainerId: r[1], trainerName: r[2],
       memberId: r[3], memberName: r[4],
@@ -652,6 +679,22 @@ function getTrainerSchedule(trainerId) {
   const workDays  = ['월','화','수','목','금'];
   const workHours = ['09:00','10:00','11:00','12:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'];
 
+  // trainerId로 trainerName 조회 (구 데이터 폴백용)
+  let trainerName = '';
+  try {
+    const ss2     = SpreadsheetApp.openById(SHEET_ID);
+    const trSheet = ss2.getSheetByName(SHEET_NAMES.trainers);
+    if (trSheet) {
+      const trRows = trSheet.getDataRange().getValues();
+      for (let i = 1; i < trRows.length; i++) {
+        if (String(trRows[i][0]).trim() === String(trainerId).trim()) {
+          trainerName = String(trRows[i][1]).trim();
+          break;
+        }
+      }
+    }
+  } catch(e) {}
+
   const booked = {};
   try {
     const ss      = SpreadsheetApp.openById(SHEET_ID);
@@ -659,8 +702,12 @@ function getTrainerSchedule(trainerId) {
     if (ptSheet) {
       const rows = ptSheet.getDataRange().getValues();
       for (let i = 1; i < rows.length; i++) {
-        const r = rows[i];
-        if (String(r[1]).trim() !== String(trainerId).trim()) continue;
+        const r          = rows[i];
+        const rTrainerId   = String(r[1]).trim();
+        const rTrainerName = String(r[2]).trim();
+        const matchTrainer = rTrainerId === String(trainerId).trim()
+                          || (trainerName && rTrainerName === trainerName);
+        if (!matchTrainer) continue;
         if (String(r[13]).trim() !== '진행중') continue;
         const days = String(r[8] || '').split(',').map(d => d.trim()).filter(d => d);
         const time = String(r[9] || '').trim();
@@ -694,13 +741,32 @@ function getTrainerDashboard(trainerId) {
   const memSheet = ss.getSheetByName(SHEET_NAMES.members);
   if (!ptSheet || !memSheet) return { members: [], stats: {}, weeklySchedule: {} };
 
+  // trainerId로 trainerName 조회 (구 데이터 폴백용)
+  let trainerName = '';
+  try {
+    const trSheet = ss.getSheetByName(SHEET_NAMES.trainers);
+    if (trSheet) {
+      const trRows = trSheet.getDataRange().getValues();
+      for (let i = 1; i < trRows.length; i++) {
+        if (String(trRows[i][0]).trim() === String(trainerId).trim()) {
+          trainerName = String(trRows[i][1]).trim();
+          break;
+        }
+      }
+    }
+  } catch(e) {}
+
   const ptRows  = ptSheet.getDataRange().getValues();
   const members = [];
 
   for (let i = 1; i < ptRows.length; i++) {
     const r = ptRows[i];
-    if (String(r[1]).trim() !== String(trainerId).trim()) continue;
-    if (r[13] !== '진행중') continue;
+    const rTrainerId   = String(r[1]).trim();
+    const rTrainerName = String(r[2]).trim();
+    const matchTrainer = rTrainerId === String(trainerId).trim()
+                      || (trainerName && rTrainerName === trainerName);
+    if (!matchTrainer) continue;
+    if (String(r[13]).trim() !== '진행중') continue;
     members.push({
       memberId: r[3], memberName: r[4], ptId: r[0],
       totalSessions:     Number(r[5])  || 0,
@@ -769,6 +835,30 @@ function addMember(body) {
   return { success: true, memberId };
 }
 
+function addPayment(body) {
+  const ss    = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_NAMES.payments);
+  if (!sheet) return { success: false, message: '결제내역 시트 없음' };
+
+  const payId = `PAY_${new Date().getTime()}`;
+  const today = Utilities.formatDate(new Date(), 'GMT+9', 'yyyy-MM-dd');
+  // 실제 시트 컬럼 순서: A=결제ID, B=회원ID, C=회원명, D=결제일, E=항목, F=금액, G=결제수단, H=미수금, I=처리상태, J=담당자, K=비고
+  sheet.appendRow([
+    payId,
+    body.memberId   || '',
+    body.memberName || '',
+    body.payDate    || today,
+    body.product    || '',
+    Number(body.amount) || 0,
+    body.payMethod  || '',
+    0,
+    body.status     || '완료',
+    '관리자',
+    ''
+  ]);
+  return { success: true, payId };
+}
+
 function updatePayment(body) {
   const ss    = SpreadsheetApp.openById(SHEET_ID);
   const sheet = ss.getSheetByName(SHEET_NAMES.payments);
@@ -776,7 +866,7 @@ function updatePayment(body) {
   const rows  = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]).trim() === String(body.payId).trim()) {
-      sheet.getRange(i + 1, 8).setValue('완료');
+      sheet.getRange(i + 1, 9).setValue('완료');
       return { success: true };
     }
   }
@@ -848,6 +938,10 @@ function registerPT(body) {
     body.time        || '',
     Number(body.sessions) || 0
   ]);
+  // 선호시간 셀을 텍스트 형식으로 강제 지정 (Google Sheets 자동 날짜 변환 방지)
+  const lastRow = reqSheet.getLastRow();
+  reqSheet.getRange(lastRow, 9).setNumberFormat('@STRING@');
+  reqSheet.getRange(lastRow, 9).setValue(String(body.time || ''));
 
   return { success: true };
 }
@@ -885,7 +979,9 @@ function getPTRequests(trainerId) {
         상태:      r[5],
         회원ID:    r[6] || '',
         선호요일:  r[7] || '',
-        선호시간:  r[8] || '',
+        선호시간:  r[8] instanceof Date
+          ? Utilities.formatDate(r[8], 'GMT', 'HH:mm')
+          : String(r[8] || ''),
         선호세션수: Number(r[9]) || 0
       };
     });

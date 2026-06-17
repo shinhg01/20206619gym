@@ -577,6 +577,54 @@
 
       <!-- 탭 2: 결제 관리 -->
       <div class="admin-tab-panel" id="tab-payments">
+
+        <!-- 결제 직접 입력 폼 -->
+        <div class="admin-section">
+          <div class="admin-section-title"><i class="fa-solid fa-plus"></i>결제 직접 입력</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>회원 선택 *</label>
+              <select class="form-input" id="payMemberSelect">
+                <option value="">회원을 선택하세요</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>상품명 *</label>
+              <input type="text" class="form-input" id="payProduct" placeholder="예: 1개월 이용권, PT 10회">
+            </div>
+            <div class="form-group">
+              <label>금액 (원) *</label>
+              <input type="number" class="form-input" id="payAmount" placeholder="예: 80000" min="0">
+            </div>
+            <div class="form-group">
+              <label>결제일 *</label>
+              <input type="date" class="form-input" id="payDate">
+            </div>
+            <div class="form-group">
+              <label>결제수단</label>
+              <select class="form-input" id="payMethod">
+                <option value="카드">카드</option>
+                <option value="계좌이체">계좌이체</option>
+                <option value="현금">현금</option>
+                <option value="—">—</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>상태</label>
+              <select class="form-input" id="payStatus">
+                <option value="완료">완료</option>
+                <option value="미납">미납</option>
+                <option value="부분납">부분납</option>
+              </select>
+            </div>
+            <div class="form-group full" style="display:flex; justify-content:flex-end;">
+              <button class="btn btn-primary" onclick="submitAddPayment()">
+                <i class="fa-solid fa-plus"></i> 결제 등록
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="admin-section">
           <div class="admin-section-title"><i class="fa-solid fa-triangle-exclamation"></i>미수금 회원</div>
           <div id="unpaidList"></div>
@@ -587,8 +635,8 @@
             <table class="admin-table" id="paymentTable">
               <thead>
                 <tr>
-                  <th>결제ID</th><th>회원명</th><th>상품</th><th>금액</th>
-                  <th>결제일</th><th>만료일</th><th>상태</th><th>처리</th>
+                  <th>결제ID</th><th>회원명</th><th>항목</th><th>금액</th>
+                  <th>결제일</th><th>결제수단</th><th>미수금</th><th>상태</th><th>처리</th>
                 </tr>
               </thead>
               <tbody id="paymentTableBody"></tbody>

@@ -247,7 +247,6 @@ function handleMockGet(action, params) {
 
     case 'getPT': {
       const uid = params.userId || 'user';
-      if (params.role === '일반회원') return { contracts: [], nextSchedule: null };
       // user 계정은 시드 PT 계약 반환
       if (uid === 'user') {
         return {
@@ -713,6 +712,9 @@ function handleMockPost(action, body) {
 
     case 'addMember':
       return { success: true, memberId: `M${Date.now().toString().slice(-3)}` };
+
+    case 'addPayment':
+      return { success: true, payId: `PAY_${Date.now()}` };
 
     case 'updatePayment':
       return { success: true };

@@ -95,14 +95,16 @@ function parseMemberRows(rows) {
 function parsePaymentRows(rows) {
   if (!Array.isArray(rows) || rows.length < 2) return [];
   return rows.slice(1).map(r => ({
-    payId:   String(r[0] || ''),
-    memberId:String(r[1] || ''),
-    name:    String(r[2] || ''),
-    product: String(r[3] || ''),
-    amount:  Number(r[4]) || 0,
-    payDate: String(r[5] || ''),
-    expiry:  String(r[6] || ''),
-    status:  String(r[7] || ''),
+    payId:     String(r[0] || ''),
+    memberId:  String(r[1] || ''),
+    name:      String(r[2] || ''),
+    payDate:   String(r[3] || ''),   // D열: 결제일
+    product:   String(r[4] || ''),   // E열: 항목
+    amount:    Number(r[5]) || 0,    // F열: 금액(원)
+    payMethod: String(r[6] || ''),   // G열: 결제수단
+    unpaid:    Number(r[7]) || 0,    // H열: 미수금(원)
+    status:    String(r[8] || ''),   // I열: 처리상태
+    note:      String(r[10] || ''),  // K열: 비고
   }));
 }
 
@@ -142,10 +144,15 @@ function renderAll() {
   renderPTRequests();
   renderStatCards();
   renderMemberTable();
+  populatePayMemberSelect();
   renderPayments();
   renderEquipTable();
   renderTrainerMapping();
   updateBadges();
+
+  // 결제일 기본값: 오늘
+  const pd = document.getElementById('payDate');
+  if (pd && !pd.value) pd.value = new Date().toISOString().slice(0, 10);
 }
 
 // ── PT 신청 대기 알람 카드 ────────────────────────────────────
@@ -298,7 +305,7 @@ function renderStatCards() {
     const diff = (d - today) / 86400000;
     return diff >= 0 && diff <= 7;
   }).length;
-  const unpaid = allPayments.filter(p => p.status === '미수금').length;
+  const unpaid = allPayments.filter(p => p.status === '미납' || p.status === '부분납' || p.unpaid > 0).length;
   const broken = allEquipment.filter(e => e.status === '고장').length;
 
   const cards = [
@@ -329,7 +336,7 @@ function updateBadges() {
     const diff = (d - today) / 86400000;
     return diff >= 0 && diff <= 7;
   }).length;
-  const unpaid = allPayments.filter(p => p.status === '미수금').length;
+  const unpaid = allPayments.filter(p => p.status === '미납' || p.status === '부분납' || p.unpaid > 0).length;
 
   const eb = document.getElementById('expiryBadge');
   if (expirySoon > 0) { eb.textContent = expirySoon; eb.style.display = ''; }
@@ -410,9 +417,60 @@ async function submitAddMember() {
   }
 }
 
+// ── 탭 2: 결제 직접 입력 ────────────────────────────────────
+function populatePayMemberSelect() {
+  const sel = document.getElementById('payMemberSelect');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">회원을 선택하세요</option>' +
+    allMembers.map(m =>
+      `<option value="${escHtml(m.id)}" data-name="${escHtml(m.name)}">${escHtml(m.name)} (${escHtml(m.id)})</option>`
+    ).join('');
+  if (current) sel.value = current;
+}
+
+async function submitAddPayment() {
+  const sel       = document.getElementById('payMemberSelect');
+  const memberId  = sel.value;
+  const memberName= sel.options[sel.selectedIndex]?.dataset.name || '';
+  const product   = document.getElementById('payProduct').value.trim();
+  const amount    = document.getElementById('payAmount').value;
+  const payDate   = document.getElementById('payDate').value;
+  const payMethod = document.getElementById('payMethod').value;
+  const status    = document.getElementById('payStatus').value;
+
+  if (!memberId)  { alert('회원을 선택해 주세요.'); return; }
+  if (!product)   { alert('상품명을 입력해 주세요.'); return; }
+  if (!amount)    { alert('금액을 입력해 주세요.'); return; }
+  if (!payDate)   { alert('결제일을 입력해 주세요.'); return; }
+
+  try {
+    const res = await callPost('addPayment', { memberId, memberName, product, amount: Number(amount), payDate, payMethod, status });
+    if (res && res.success === false) { alert(res.message || '등록에 실패했습니다.'); return; }
+
+    showToast(`${memberName} 결제 내역이 등록되었습니다.`);
+    allPayments.push({
+      payId: res.payId || `PAY_${Date.now()}`,
+      memberId, name: memberName, product,
+      amount: Number(amount), payDate, payMethod, unpaid: 0, status
+    });
+
+    // 폼 초기화
+    sel.value = '';
+    ['payProduct','payAmount','payDate'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('payStatus').value = '완료';
+
+    renderPayments();
+    renderStatCards();
+    updateBadges();
+  } catch(e) {
+    alert('등록 중 오류가 발생했습니다.');
+  }
+}
+
 // ── 탭 2: 결제 내역 렌더 ────────────────────────────────────
 function renderPayments() {
-  const unpaid = allPayments.filter(p => p.status === '미수금');
+  const unpaid = allPayments.filter(p => p.status === '미납' || p.status === '부분납' || p.unpaid > 0);
 
   // 미수금 섹션
   const unpaidEl = document.getElementById('unpaidList');
@@ -424,7 +482,8 @@ function renderPayments() {
         ${unpaid.map(p => `
           <div style="background:#1a0f0f; border:1.5px solid #EF4444; border-radius:10px; padding:0.75rem 1rem; min-width:220px;">
             <div style="font-weight:700; margin-bottom:0.25rem;">${escHtml(p.name)}</div>
-            <div style="font-size:0.78rem; color:var(--color-text-muted);">${escHtml(p.product)} · ${(p.amount).toLocaleString()}원</div>
+            <div style="font-size:0.78rem; color:var(--color-text-muted);">${escHtml(p.product)} · ${p.amount.toLocaleString()}원</div>
+            ${p.unpaid > 0 ? `<div style="font-size:0.78rem; color:#EF4444; font-weight:700;">미수금: ${p.unpaid.toLocaleString()}원</div>` : ''}
             <div style="margin-top:0.5rem; display:flex; justify-content:flex-end;">
               <button class="btn-pay" onclick="processPayment('${escHtml(p.payId)}','${escHtml(p.name)}',this)">
                 <i class="fa-solid fa-check"></i> 수납 처리
@@ -437,15 +496,16 @@ function renderPayments() {
   // 전체 결제 내역 테이블
   const tbody = document.getElementById('paymentTableBody');
   tbody.innerHTML = allPayments.map(p => {
-    const isUnpaid = p.status === '미수금';
-    const stCls = isUnpaid ? 'status-danger' : 'status-ok';
+    const isUnpaid = p.status === '미납' || p.status === '부분납';
+    const stCls = isUnpaid ? 'status-danger' : p.status === '완료' ? 'status-ok' : 'status-warn';
     return `<tr class="${isUnpaid ? 'unpaid-row' : ''}">
       <td style="font-size:0.75rem; color:var(--color-text-muted);">${escHtml(p.payId)}</td>
       <td style="font-weight:700;">${escHtml(p.name)}</td>
       <td>${escHtml(p.product)}</td>
       <td style="font-weight:700; color:var(--color-primary);">${p.amount.toLocaleString()}원</td>
       <td style="font-size:0.8rem;">${escHtml(p.payDate)}</td>
-      <td style="font-size:0.8rem;">${escHtml(p.expiry)}</td>
+      <td style="font-size:0.8rem;">${escHtml(p.payMethod || '-')}</td>
+      <td style="font-size:0.8rem; color:${p.unpaid > 0 ? '#EF4444' : 'var(--color-text-muted)'};">${p.unpaid > 0 ? p.unpaid.toLocaleString() + '원' : '-'}</td>
       <td><span class="status-badge ${stCls}">${escHtml(p.status)}</span></td>
       <td>
         ${isUnpaid

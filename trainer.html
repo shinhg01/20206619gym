@@ -202,8 +202,20 @@
       flex: 1;
       max-width: 320px;
     }
-    .pt-req-name { font-weight: 700; font-size: 0.92rem; }
-    .pt-req-meta { font-size: 0.78rem; color: var(--color-text-muted); line-height: 1.5; }
+    .pt-req-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    .pt-req-name { font-weight: 700; font-size: 0.92rem; display: flex; align-items: center; gap: 0.4rem; }
+    .pt-req-date { font-size: 0.72rem; color: var(--color-text-muted); white-space: nowrap; }
+    .pt-req-schedule { background: rgba(255,255,255,0.7); border-radius: 8px; padding: 0.6rem 0.75rem; display: flex; flex-direction: column; gap: 0.45rem; }
+    .pt-req-schedule-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; }
+    .pt-req-label { color: var(--color-text-muted); min-width: 72px; display: flex; align-items: center; gap: 0.3rem; }
+    .pt-req-value { font-weight: 600; color: var(--color-text); }
+    .pt-req-day-chips { display: flex; gap: 0.2rem; flex-wrap: wrap; }
+    .req-day-chip {
+      display: inline-block; padding: 0.1rem 0.4rem; border-radius: 5px;
+      font-size: 0.7rem; font-weight: 600;
+      background: #F3F4F6; color: #9CA3AF;
+    }
+    .req-day-chip.active { background: var(--color-primary); color: #FFF; }
     .pt-request-actions { display: flex; gap: 0.5rem; margin-top: 0.25rem; }
     .pt-request-actions button {
       flex: 1; padding: 0.4rem 0; border-radius: 8px; border: none;
